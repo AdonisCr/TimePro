@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link , useNavigate } from 'react-router-dom';
 import { Clock, Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react';
+
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -9,10 +10,12 @@ const LoginPage = () => {
     password: ''
   });
 
+  const navigate = useNavigate();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', formData);
+
+    navigate('/dashboard');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

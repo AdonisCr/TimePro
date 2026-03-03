@@ -1,0 +1,14 @@
+# Backend
+backend/vendor/
+backend/.env
+backend/storage/*.key
+backend/public/storage
+backend/bootstrap/cache/*
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Divers
+.DS_Store

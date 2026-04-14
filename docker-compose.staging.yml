@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: timepro-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=staging
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_DATABASE=timepro
+      - DB_USERNAME=timepro
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - db
+    volumes:
+      - ./Backend:/var/www/html
+    networks:
+      - timepro-network
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: timepro-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./Frontend:/var/www/html
+    networks:
+      - timepro-network
+
+  db:
+    image: mysql:8.0
+    container_name: timepro-db
+    restart: always
+    environment:
+      - MYSQL_DATABASE=timepro
+      - MYSQL_USER=timepro
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - timepro-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: timepro-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./Frontend/dist:/var/www/html
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+    networks:
+      - timepro-network
+
+networks:
+  timepro-network:
+    driver: bridge
+
+volumes:
+  db-data:

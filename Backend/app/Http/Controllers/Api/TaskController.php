@@ -39,6 +39,8 @@ class TaskController extends Controller
             'status' => ['nullable', Rule::in(['todo', 'in_progress', 'done'])],
             'due_date' => ['nullable', 'date'],
             'is_completed' => ['nullable', 'boolean'],
+            'recurrence' => ['nullable', Rule::in(['none', 'daily', 'weekly', 'monthly'])],
+            'recurrence_end_date' => ['nullable', 'date'],
         ]);
 
         if (isset($validated['project_id'])) {

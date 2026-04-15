@@ -23,6 +23,9 @@ class Task extends Model
         'due_date',
         'is_completed',
         'order',
+        'recurrence',
+        'recurrence_end_date',
+        'recurrence_count',
     ];
 
     protected function casts(): array

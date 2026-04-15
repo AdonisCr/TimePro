@@ -76,12 +76,12 @@ class AuthController extends Controller
         // Supprime les anciens tokens pour éviter l'accumulation
         $user->tokens()->delete();
 
-        $token = $user->createToken('auth_token', ['*'], now()->addDays(30))->plainTextToken;
+        $token = $user->createToken('auth_token', [], now()->addHours(24))->plainTextToken;
 
         return response()->json([
             'access_token' => $token,
             'token_type'   => 'Bearer',
-            'expires_in'   => 30 * 24 * 60, // minutes
+            'expires_in'   => 24 * 60, // minutes
             'user'         => [
                 'id'    => $user->id,
                 'name'  => $user->name,

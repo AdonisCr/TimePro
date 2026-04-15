@@ -12,7 +12,10 @@ class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $projects = $request->user()->projects()->orderBy('created_at', 'desc')->get();
+        $projects = $request->user()->projects()
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
         return response()->json($projects);
     }
 

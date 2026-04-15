@@ -17,6 +17,7 @@ class TeamController extends Controller
         $teams = $request->user()
             ->teamMembers()
             ->with(['owner', 'members', 'projects'])
+            ->limit(50)
             ->get()
             ->pluck('team');
 
@@ -152,7 +153,10 @@ class TeamController extends Controller
 
     public function myTeams(Request $request): JsonResponse
     {
-        $memberships = $request->user()->teamMembers()->with('team.owner')->get();
+        $memberships = $request->user()->teamMembers()
+            ->with('team.owner')
+            ->limit(50)
+            ->get();
         return response()->json($memberships);
     }
 }

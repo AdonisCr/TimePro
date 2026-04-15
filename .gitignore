@@ -1,6 +1,7 @@
 # Backend
 backend/vendor/
 backend/.env
+backend/.env.*
 backend/storage/*.key
 backend/public/storage
 backend/bootstrap/cache/*

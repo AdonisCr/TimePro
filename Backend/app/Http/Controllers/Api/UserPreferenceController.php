@@ -60,12 +60,8 @@ class UserPreferenceController extends Controller
             $validated
         );
 
-        if ($request->onboarding_completed) {
-            $request->user()->preferences()->update(['onboarding_completed' => true]);
-        }
-
         return response()->json([
-            'message' => 'Preferences sauvegardees',
+            'message' => 'Préférences sauvegardées',
             'preferences' => $request->user()->fresh()->preferences,
         ]);
     }

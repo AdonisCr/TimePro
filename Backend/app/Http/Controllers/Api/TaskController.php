@@ -38,10 +38,18 @@ class TaskController extends Controller
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high'])],
             'status' => ['nullable', Rule::in(['todo', 'in_progress', 'done'])],
             'due_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date'],
+            'estimated_duration' => ['nullable', 'integer', 'min:1'],
             'is_completed' => ['nullable', 'boolean'],
-            'recurrence' => ['nullable', Rule::in(['none', 'daily', 'weekly', 'monthly'])],
+            'recurrence' => ['nullable', Rule::in(['none', 'daily', 'weekly', 'monthly', 'yearly'])],
             'recurrence_end_date' => ['nullable', 'date'],
+            'recurrence_count' => ['nullable', 'integer', 'min:1'],
+            'depends_on' => ['nullable', 'exists:tasks,id'],
         ]);
+
+        if (isset($validated['depends_on']) && $validated['depends_on'] == ($validated['parent_id'] ?? null)) {
+            return response()->json(['message' => 'Une tâche ne peut pas dépendre de sa propre parente'], 400);
+        }
 
         if (isset($validated['project_id'])) {
             $project = \App\Models\Project::find($validated['project_id']);
@@ -87,6 +95,10 @@ class TaskController extends Controller
             'due_date' => ['nullable', 'date'],
             'is_completed' => ['nullable', 'boolean'],
             'order' => ['nullable', 'integer'],
+            'recurrence' => ['nullable', Rule::in(['none', 'daily', 'weekly', 'monthly', 'yearly'])],
+            'recurrence_end_date' => ['nullable', 'date'],
+            'recurrence_count' => ['nullable', 'integer', 'min:1'],
+            'depends_on' => ['nullable', 'exists:tasks,id'],
         ]);
 
         if (isset($validated['project_id'])) {
@@ -98,11 +110,21 @@ class TaskController extends Controller
 
         if (isset($validated['parent_id'])) {
             $parent = Task::find($validated['parent_id']);
-            if ($parent->user_id !== $request->user()->id) {
+            if (!$parent || $parent->user_id !== $request->user()->id) {
                 return response()->json(['message' => 'Tâche parente non autorisée'], 403);
             }
             if ($validated['parent_id'] === $task->id) {
                 return response()->json(['message' => 'Une tâche ne peut pas être sa propre parente'], 400);
+            }
+        }
+
+        if (isset($validated['depends_on'])) {
+            $dependsOn = Task::find($validated['depends_on']);
+            if (!$dependsOn || $dependsOn->user_id !== $request->user()->id) {
+                return response()->json(['message' => 'Tâche dépendante non autorisée'], 403);
+            }
+            if ($validated['depends_on'] === $task->id) {
+                return response()->json(['message' => 'Une tâche ne peut pas dépendre d\'elle-même'], 400);
             }
         }
 
@@ -127,6 +149,7 @@ class TaskController extends Controller
             'tasks' => ['required', 'array'],
             'tasks.*.id' => ['required', 'integer', 'exists:tasks,id'],
             'tasks.*.status' => ['required', 'string', Rule::in(['todo', 'in_progress', 'done'])],
+            'tasks.*.order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         foreach ($request->tasks as $taskData) {
@@ -135,7 +158,10 @@ class TaskController extends Controller
                 ->first();
 
             if ($task) {
-                $task->update(['status' => $taskData['status']]);
+                $task->update([
+                    'status' => $taskData['status'],
+                    'order' => $taskData['order'] ?? $task->order,
+                ]);
             }
         }
 

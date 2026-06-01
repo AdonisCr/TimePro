@@ -15,6 +15,15 @@ class LabelController extends Controller
         return response()->json($labels);
     }
 
+    public function show(Request $request, Label $label): JsonResponse
+    {
+        if ($label->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Non autorisé'], 403);
+        }
+
+        return response()->json($label);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

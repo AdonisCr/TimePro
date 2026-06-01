@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark body {
+    @apply bg-dark-bg text-dark-text;
+  }
+  
+  .dark .bg-white {
+    @apply bg-dark-card;
+  }
+  
+  .dark .text-text-dark {
+    @apply text-dark-text;
+  }
+  
+  .dark .text-text-soft {
+    @apply text-slate-400;
+  }
+  
+  .dark .border-gray-100 {
+    @apply border-slate-700;
+  }
+  
+  .dark .shadow-sm {
+    @apply shadow-lg shadow-black/30;
+  }
+
+  .dark .bg-primary\/5,
+  .dark .bg-primary\/10,
+  .dark .bg-primary\/20,
+  .dark .bg-primary\/30 {
+    background-color: rgba(0, 180, 219, 0.15);
+  }
+  
+  .dark .bg-gray-50 {
+    @apply bg-slate-800;
+  }
+  
+  .dark .bg-bg-light {
+    @apply bg-slate-900;
+  }
+}

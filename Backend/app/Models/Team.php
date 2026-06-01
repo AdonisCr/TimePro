@@ -12,7 +12,7 @@ class Team extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'owner_id'];
+    protected $fillable = ['name', 'description', 'owner_id'];
 
     public function owner(): BelongsTo
     {
@@ -22,12 +22,16 @@ class Team extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'team_members')
-            ->withPivot('role', 'joined_at')
-            ->withTimestamps();
+            ->withPivot('role', 'joined_at');
     }
 
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TeamInvitation::class);
     }
 }

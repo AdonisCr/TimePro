@@ -12,10 +12,11 @@ class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $perPage = (int) $request->get('per_page', 20);
         $projects = $request->user()->projects()
             ->orderBy('created_at', 'desc')
-            ->limit(100)
-            ->get();
+            ->paginate(min($perPage, 100));
+
         return response()->json($projects);
     }
 
@@ -27,9 +28,12 @@ class ProjectController extends Controller
             'color' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['active', 'completed', 'archived'])],
             'deadline' => ['nullable', 'date'],
+            'time_budget' => ['nullable', 'integer', 'min:0'],
+            'time_budget_warning' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $project = $request->user()->projects()->create($validated);
+        $project->loadCount('tasks');
         return response()->json($project, 201);
     }
 
@@ -54,10 +58,12 @@ class ProjectController extends Controller
             'color' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['active', 'completed', 'archived'])],
             'deadline' => ['nullable', 'date'],
+            'time_budget' => ['nullable', 'integer', 'min:0'],
+            'time_budget_warning' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $project->update($validated);
-        return response()->json($project);
+        return response()->json($project->fresh());
     }
 
     public function destroy(Request $request, Project $project): JsonResponse

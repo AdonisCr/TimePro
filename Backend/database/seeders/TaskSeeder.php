@@ -75,6 +75,8 @@ class TaskSeeder extends Seeder
                 'priority' => $task['priority'],
                 'status' => $task['status'],
                 'due_date' => $task['due_date'],
+                'order' => $index,
+                'is_completed' => $task['status'] === 'done',
             ]);
         }
     }

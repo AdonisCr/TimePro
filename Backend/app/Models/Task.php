@@ -21,18 +21,25 @@ class Task extends Model
         'priority',
         'status',
         'due_date',
+        'start_date',
+        'estimated_duration',
         'is_completed',
         'order',
         'recurrence',
         'recurrence_end_date',
         'recurrence_count',
+        'depends_on',
     ];
 
     protected function casts(): array
     {
         return [
             'due_date' => 'date',
+            'start_date' => 'date',
+            'estimated_duration' => 'integer',
             'is_completed' => 'boolean',
+            'recurrence_end_date' => 'date',
+            'recurrence_count' => 'integer',
         ];
     }
 
@@ -64,6 +71,16 @@ class Task extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Task::class, 'parent_id');
+    }
+
+    public function dependsOn(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'depends_on');
+    }
+
+    public function dependentTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'depends_on');
     }
 
     public function comments(): HasMany

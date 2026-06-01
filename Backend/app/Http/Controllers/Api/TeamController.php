@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TeamInvitationMail;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Models\TeamMember;
+use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class TeamController extends Controller
@@ -15,11 +20,10 @@ class TeamController extends Controller
     public function index(Request $request): JsonResponse
     {
         $teams = $request->user()
-            ->teamMembers()
+            ->teams()
             ->with(['owner', 'members', 'projects'])
             ->limit(50)
-            ->get()
-            ->pluck('team');
+            ->get();
 
         return response()->json($teams);
     }
@@ -53,7 +57,7 @@ class TeamController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
-        $team->load('owner', 'members', 'projects.tasks', 'projects.tasks.timeEntries');
+        $team->load(['owner', 'members', 'projects', 'invitations']);
         return response()->json($team);
     }
 
@@ -97,26 +101,44 @@ class TeamController extends Controller
             'role' => ['nullable', Rule::in(['admin', 'member', 'viewer'])],
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
-        
-        if (!$user) {
-            return response()->json(['message' => 'Utilisateur non trouvé'], 404);
-        }
+        $existingMember = $team->members()->whereHas('user', function ($q) use ($validated) {
+            $q->where('email', $validated['email']);
+        })->first();
 
-        $existingMember = $team->members()->where('user_id', $user->id)->first();
-        
         if ($existingMember) {
             return response()->json(['message' => 'Utilisateur déjà membre'], 400);
         }
 
-        TeamMember::create([
+        $existingInvitation = TeamInvitation::where('team_id', $team->id)
+            ->where('email', $validated['email'])
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if ($existingInvitation) {
+            return response()->json(['message' => 'Invitation déjà envoyée à cet email'], 400);
+        }
+
+        $invitation = TeamInvitation::create([
             'team_id' => $team->id,
-            'user_id' => $user->id,
+            'email' => $validated['email'],
+            'token' => TeamInvitation::generateToken(),
+            'invited_by' => $request->user()->id,
             'role' => $validated['role'] ?? 'member',
+            'expires_at' => now()->addDays(7),
         ]);
 
-        $team->load('members');
-        return response()->json($team);
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        $acceptUrl = $frontendUrl . '/invitation/' . $invitation->token;
+
+        Mail::to($validated['email'])->send(new TeamInvitationMail($invitation, $acceptUrl));
+
+        $team->load('members', 'invitations');
+        return response()->json([
+            ...$team->toArray(),
+            'invitation_sent' => true,
+            'invited_email' => $validated['email'],
+        ]);
     }
 
     public function removeMember(Request $request, Team $team, User $user): JsonResponse
@@ -153,10 +175,94 @@ class TeamController extends Controller
 
     public function myTeams(Request $request): JsonResponse
     {
-        $memberships = $request->user()->teamMembers()
+        $memberships = $request->user()->teamMemberships()
             ->with('team.owner')
             ->limit(50)
             ->get();
         return response()->json($memberships);
+    }
+
+    public function workload(Request $request, Team $team): JsonResponse
+    {
+        $member = $team->members()->where('user_id', $request->user()->id)->first();
+
+        if (!$member) {
+            return response()->json(['message' => 'Non autorisé'], 403);
+        }
+
+        $team->load('members');
+
+        $period = $request->get('period', 'week');
+        $dateStart = match ($period) {
+            'today' => now()->startOfDay(),
+            'week' => now()->startOfWeek(),
+            'month' => now()->startOfMonth(),
+            default => now()->startOfWeek(),
+        };
+
+        $projectId = $request->get('project_id');
+
+        $membersData = $team->members->map(function (User $user) use ($dateStart, $projectId) {
+            $query = TimeEntry::where('user_id', $user->id)
+                ->where('start_time', '>=', $dateStart);
+
+            if ($projectId) {
+                $query->where('project_id', $projectId);
+            }
+
+            $totalSeconds = (clone $query)->sum('duration');
+            $entriesCount = (clone $query)->count();
+
+            $byDay = (clone $query)
+                ->select(DB::raw('DATE(start_time) as date'), DB::raw('SUM(duration) as total'))
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->mapWithKeys(fn ($row) => [$row->date => (int) $row->total]);
+
+            $entries = (clone $query)
+                ->whereNotNull('project_id')
+                ->select('project_id', 'duration')
+                ->get();
+
+            $byProject = $entries->groupBy('project_id')->map(function ($rows, $pid) {
+                $first = $rows->first();
+                return [
+                    'project_id' => (int) $pid,
+                    'total_seconds' => (int) $rows->sum('duration'),
+                ];
+            })->values();
+
+            return [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'total_seconds' => $totalSeconds,
+                'entries_count' => $entriesCount,
+                'by_day' => $byDay,
+                'by_project' => $byProject,
+            ];
+        });
+
+        $projectIds = $membersData->pluck('by_project')->flatten(1)->pluck('project_id')->unique()->filter();
+        $projects = \App\Models\Project::whereIn('id', $projectIds)->get(['id', 'name', 'color'])->keyBy('id');
+
+        $membersData = $membersData->map(function ($data) use ($projects) {
+            $data['by_project'] = collect($data['by_project'])->map(function ($p) use ($projects) {
+                $proj = $projects->get($p['project_id']);
+                $p['project_name'] = $proj?->name;
+                $p['project_color'] = $proj?->color;
+                return $p;
+            });
+            return $data;
+        });
+
+        return response()->json([
+            'team_id' => $team->id,
+            'team_name' => $team->name,
+            'period' => $period,
+            'date_start' => $dateStart->toDateString(),
+            'members' => $membersData,
+        ]);
     }
 }

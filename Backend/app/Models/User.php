@@ -18,6 +18,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'profile_photo_path',
+    ];
+
+    protected $appends = [
+        'profile_photo_url',
     ];
 
     protected $hidden = [
@@ -58,6 +63,22 @@ class User extends Authenticatable
         return $this->hasOne(UserPreference::class);
     }
 
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        if (!$this->profile_photo_path) return null;
+        return asset('storage/' . $this->profile_photo_path);
+    }
+
+    public function automationRules(): HasMany
+    {
+        return $this->hasMany(AutomationRule::class);
+    }
+
     public function teamMemberships(): HasMany
     {
         return $this->hasMany(TeamMember::class);
@@ -66,7 +87,6 @@ class User extends Authenticatable
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'team_members')
-            ->withPivot('role', 'joined_at')
-            ->withTimestamps();
+            ->withPivot('role', 'joined_at');
     }
 }

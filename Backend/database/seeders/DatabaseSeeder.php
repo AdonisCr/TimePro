@@ -11,8 +11,13 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             ProjectSeeder::class,
+            LabelSeeder::class,
+            TeamSeeder::class,
             TaskSeeder::class,
+            TaskCommentSeeder::class,
             TimeEntrySeeder::class,
+            NotificationSeeder::class,
+            UserPreferenceSeeder::class,
         ]);
     }
 }

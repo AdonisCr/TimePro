@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TeamMember extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'team_members';
 
     protected $fillable = ['team_id', 'user_id', 'role', 'joined_at'];

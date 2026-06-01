@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\TeamInvitation;
+use App\Models\TeamMember;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
@@ -44,10 +46,35 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $user->sendEmailVerificationNotification();
+        if (app()->environment('local')) {
+            $user->markEmailAsVerified();
+        } else {
+            $user->sendEmailVerificationNotification();
+        }
+
+        TeamInvitation::where('email', $user->email)
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->each(function (TeamInvitation $invitation) use ($user) {
+                $exists = TeamMember::where('team_id', $invitation->team_id)
+                    ->where('user_id', $user->id)
+                    ->exists();
+
+                if (!$exists) {
+                    TeamMember::create([
+                        'team_id' => $invitation->team_id,
+                        'user_id' => $user->id,
+                        'role' => $invitation->role,
+                    ]);
+                }
+
+                $invitation->update(['accepted_at' => now()]);
+            });
 
         return response()->json([
-            'message' => 'Compte créé ! Vérifiez votre email avant de vous connecter.',
+            'message' => app()->environment('local')
+                ? 'Compte créé ! Vous pouvez vous connecter.'
+                : 'Compte créé ! Vérifiez votre email avant de vous connecter.',
             'user'    => $user,
         ], 201);
     }
@@ -64,6 +91,10 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Identifiants invalides.'], 401);
+        }
+
+        if (app()->environment('local') && !$user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
         }
 
         if (!$user->hasVerifiedEmail()) {
@@ -93,13 +124,9 @@ class AuthController extends Controller
     // ─── Infos utilisateur connecté ─────────────────────────────
     public function me(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load('preferences');
 
-        return response()->json([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-        ]);
+        return response()->json($user);
     }
 
     // ─── Vérification email ─────────────────────────────────────
@@ -111,14 +138,16 @@ class AuthController extends Controller
             return response()->json(['message' => 'Lien de vérification invalide.'], 403);
         }
 
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+
         if ($user->hasVerifiedEmail()) {
-            return redirect(env('FRONTEND_URL') . '/login?already_verified=1');
+            return redirect($frontendUrl . '/login?already_verified=1');
         }
 
         $user->markEmailAsVerified();
         event(new Verified($user));
 
-        return redirect(env('FRONTEND_URL') . '/login?verified=1');
+        return redirect($frontendUrl . '/login?verified=1');
     }
 
     // ─── Renvoi lien de vérification ────────────────────────────
@@ -204,7 +233,43 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profil mis à jour',
-            'user' => $request->user()->only(['id', 'name', 'email']),
+            'user' => $request->user()->fresh()->load('preferences'),
+        ]);
+    }
+
+    public function updateAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->profile_photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->update(['profile_photo_path' => $path]);
+
+        return response()->json([
+            'message' => 'Photo de profil mise à jour',
+            'user' => $user->fresh(),
+        ]);
+    }
+
+    public function deleteAvatar(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->profile_photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+            $user->update(['profile_photo_path' => null]);
+        }
+
+        return response()->json([
+            'message' => 'Photo de profil supprimée',
+            'user' => $user->fresh(),
         ]);
     }
 

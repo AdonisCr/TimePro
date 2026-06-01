@@ -9,12 +9,13 @@ use Illuminate\Http\JsonResponse;
 
 class NotificationController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $perPage = (int) $request->get('per_page', 20);
         $notifications = auth()->user()
             ->notifications()
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(min($perPage, 100));
 
         return response()->json($notifications);
     }
@@ -36,7 +37,7 @@ class NotificationController extends Controller
     public function markAsRead(Notification $notification): JsonResponse
     {
         if ($notification->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
 
         $notification->update(['is_read' => true]);
@@ -48,7 +49,7 @@ class NotificationController extends Controller
     {
         auth()->user()->notifications()->update(['is_read' => true]);
 
-        return response()->json(['message' => 'All notifications marked as read']);
+        return response()->json(['message' => 'Toutes les notifications marquées comme lues']);
     }
 
     public function unreadCount(): JsonResponse
@@ -64,11 +65,11 @@ class NotificationController extends Controller
     public function destroy(Notification $notification): JsonResponse
     {
         if ($notification->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['message' => 'Non autorisé'], 403);
         }
 
         $notification->delete();
 
-        return response()->json(['message' => 'Notification deleted']);
+        return response()->json(['message' => 'Notification supprimée']);
     }
 }

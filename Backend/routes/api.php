@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\LabelController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\TaskCommentController;
+use App\Http\Controllers\Api\AutomationRuleController;
+use App\Http\Controllers\Api\InvitationController;
 
 // ── Routes publiques avec rate limiting ──────────────────────
 
@@ -49,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     
     Route::put('/user', [AuthController::class, 'updateProfile']);
+    Route::post('/user/avatar', [AuthController::class, 'updateAvatar']);
+    Route::delete('/user/avatar', [AuthController::class, 'deleteAvatar']);
     Route::post('/user/password', [AuthController::class, 'updatePassword']);
 
     // User Preferences
@@ -60,6 +64,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('labels', LabelController::class);
     Route::post('/labels/{label}/assign', [LabelController::class, 'assign']);
     Route::delete('/labels/{label}/remove', [LabelController::class, 'remove']);
+
+    // Automation Rules
+    Route::apiResource('automation-rules', AutomationRuleController::class);
+    Route::patch('/automation-rules/{automation_rule}/toggle', [AutomationRuleController::class, 'toggle']);
 
     // Projects CRUD
     Route::apiResource('projects', ProjectController::class);
@@ -83,6 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Teams
     Route::get('/teams/my', [TeamController::class, 'myTeams']);
     Route::apiResource('teams', TeamController::class);
+    Route::get('/teams/{team}/workload', [TeamController::class, 'workload']);
     Route::post('/teams/{team}/members', [TeamController::class, 'addMember']);
     Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember']);
     Route::patch('/teams/{team}/members/{user}', [TeamController::class, 'updateMemberRole']);
@@ -92,6 +101,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store']);
     Route::patch('/comments/{comment}', [TaskCommentController::class, 'update']);
     Route::delete('/comments/{comment}', [TaskCommentController::class, 'destroy']);
+});
+
+// Invitations (publique + protégée)
+Route::get('/invitations/{token}', [InvitationController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/invitations/{token}/accept', [InvitationController::class, 'accept']);
 });
 
 // Health check

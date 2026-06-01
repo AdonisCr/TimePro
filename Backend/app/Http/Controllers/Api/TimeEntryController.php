@@ -104,10 +104,24 @@ class TimeEntryController extends Controller
             'project_id' => ['nullable', 'exists:projects,id'],
             'description' => ['nullable', 'string'],
             'start_time' => ['nullable', 'date'],
-            'end_time' => ['nullable', 'date'],
+            'end_time' => ['nullable', 'date', 'after:start_time'],
             'duration' => ['nullable', 'integer', 'min:0'],
             'is_manual' => ['nullable', 'boolean'],
         ]);
+
+        if (isset($validated['task_id'])) {
+            $task = \App\Models\Task::find($validated['task_id']);
+            if (!$task || $task->user_id !== $request->user()->id) {
+                return response()->json(['message' => 'Tâche non autorisée'], 403);
+            }
+        }
+
+        if (isset($validated['project_id'])) {
+            $project = \App\Models\Project::find($validated['project_id']);
+            if (!$project || $project->user_id !== $request->user()->id) {
+                return response()->json(['message' => 'Projet non autorisé'], 403);
+            }
+        }
 
         if (isset($validated['start_time']) && isset($validated['end_time']) && !isset($validated['duration'])) {
             $start = \Carbon\Carbon::parse($validated['start_time']);

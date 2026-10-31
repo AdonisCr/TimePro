@@ -1,5 +1,13 @@
 import React from 'react';
-import { Clock, User, Flag, Calendar, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, User, Calendar, CheckCircle, AlertCircle, Play, Target } from 'lucide-react';
+import {
+  getEatThatFrogTask,
+  getMITTasks,
+  getTwoMinuteTasks,
+  getIvyLeeTasks,
+  type Task as ProductivityTask,
+} from '../../lib/productivity';
 
 interface TaskItem {
   id: number;
@@ -11,6 +19,7 @@ interface TaskItem {
   dueTime?: string;
   assignee?: string;
   project?: string;
+  estimated_duration?: number;
 }
 
 interface TaskListProps {
@@ -21,7 +30,55 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, title = "Tâches récentes", showAll = false, onTaskClick }) => {
+  const navigate = useNavigate();
   const displayTasks = showAll ? tasks : tasks.slice(0, 5);
+
+  // Get productivity badges
+  const productivityTasks = tasks as unknown as ProductivityTask[];
+  const frogTask = getEatThatFrogTask(productivityTasks);
+  const mitTasks = getMITTasks(productivityTasks);
+  const twoMinuteTasks = getTwoMinuteTasks(productivityTasks);
+  const ivyLeeTasks = getIvyLeeTasks(productivityTasks);
+
+  const getTaskBadges = (taskId: number) => {
+    const badges: React.ReactNode[] = [];
+
+    if (frogTask?.id === taskId) {
+      badges.push(
+        <span key="frog" className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full" title="Eat That Frog">
+          🐸 Grenouille
+        </span>
+      );
+    }
+
+    if (mitTasks.some(t => t.id === taskId)) {
+      badges.push(
+        <span key="mit" className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full" title="Most Important Task">
+          ⭐ MIT
+        </span>
+      );
+    }
+
+    if (twoMinuteTasks.some(t => t.id === taskId)) {
+      badges.push(
+        <span key="2min" className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full" title="2-Minute Rule">
+          ⚡ 2min
+        </span>
+      );
+    }
+
+    // Ivy Lee numbering
+    const ivyLeeIndex = ivyLeeTasks.findIndex(t => t.id === taskId);
+    if (ivyLeeIndex !== -1) {
+      badges.push(
+        <span key="ivy" className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full" title="Ivy Lee Method">
+          📋 {ivyLeeIndex + 1}
+        </span>
+      );
+    }
+
+    return badges;
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -34,18 +91,18 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, title = "Tâches récentes",
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'in-progress': return <Play className="w-4 h-4 text-primary" />;
-      case 'pending': return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+      case 'done': return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'in_progress': return <Play className="w-4 h-4 text-primary" />;
+      case 'todo': return <AlertCircle className="w-4 h-4 text-yellow-600" />;
       default: return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-600 bg-green-50';
-      case 'in-progress': return 'text-primary bg-primary/10';
-      case 'pending': return 'text-yellow-600 bg-yellow-50';
+      case 'done': return 'text-green-600 bg-green-50';
+      case 'in_progress': return 'text-primary bg-primary/10';
+      case 'todo': return 'text-yellow-600 bg-yellow-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -104,11 +161,12 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, title = "Tâches récentes",
                 {getStatusIcon(task.status)}
               </div>
               <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
+                <div className="flex items-center flex-wrap gap-2 mb-1">
                   <h4 className="font-medium text-text-dark">{task.title}</h4>
                   <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
                     {task.priority === 'high' ? 'Haute' : task.priority === 'medium' ? 'Moyenne' : 'Basse'}
                   </span>
+                  {getTaskBadges(task.id)}
                 </div>
                 {task.description && (
                   <p className="text-sm text-text-soft mb-2 line-clamp-1">{task.description}</p>
@@ -137,8 +195,20 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, title = "Tâches récentes",
             </div>
             
             <div className="flex items-center space-x-3">
+              {task.status !== 'done' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/focus', { state: { task } });
+                  }}
+                  className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                  title="Mode Focus"
+                >
+                  <Target className="w-4 h-4" />
+                </button>
+              )}
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
-                {task.status === 'completed' ? 'Terminée' : task.status === 'in-progress' ? 'En cours' : 'En attente'}
+                {task.status === 'done' ? 'Terminée' : task.status === 'in_progress' ? 'En cours' : 'À faire'}
               </span>
             </div>
           </div>

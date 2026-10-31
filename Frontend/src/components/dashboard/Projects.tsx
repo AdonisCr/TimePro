@@ -29,10 +29,10 @@ const formatDuration = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   if (hours === 0) return `${mins}min`;
-  return mins > 0 ? `${h}h ${mins}min` : `${h}h`;
+  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
 };
 
-const getBudgetColor = (pct: number, status: string) => {
+const getBudgetColor = (_pct: number, status: string) => {
   if (status === 'exceeded') return 'bg-red-500';
   if (status === 'warning') return 'bg-amber-500';
   return 'bg-primary';
@@ -104,7 +104,7 @@ const Projects: React.FC<ProjectsProps> = ({ tasks = [], projects = [], onAddPro
             <span className="text-text-soft font-medium">Terminées</span>
           </div>
           <div className="text-2xl font-bold text-text-dark">
-            {tasks.filter(t => t.status === 'completed').length}
+            {tasks.filter(t => t.status === 'done').length}
           </div>
         </div>
       </div>

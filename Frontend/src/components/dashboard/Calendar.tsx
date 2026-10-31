@@ -2,8 +2,15 @@ import React from 'react';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 
+interface CalendarTask {
+  title: string;
+  status: string;
+  dueDate?: string | null;
+  dueTime?: string | null;
+}
+
 interface CalendarProps {
-  tasks: any[];
+  tasks: CalendarTask[];
 }
 
 const Calendar: React.FC<CalendarProps> = ({ tasks }) => {
@@ -25,18 +32,18 @@ const Calendar: React.FC<CalendarProps> = ({ tasks }) => {
 
     const getStatusColor = (status: string) => {
       switch (status) {
-        case 'completed': return 'bg-green-100 text-green-800';
-        case 'in-progress': return 'bg-primary/10 text-primary';
-        case 'pending': return 'bg-yellow-100 text-yellow-800';
+        case 'done': return 'bg-green-100 text-green-800';
+        case 'in_progress': return 'bg-primary/10 text-primary';
+        case 'todo': return 'bg-yellow-100 text-yellow-800';
         default: return 'bg-gray-100 text-text-soft';
       }
     };
 
     const getStatusLabel = (status: string) => {
       switch (status) {
-        case 'completed': return 'Terminé';
-        case 'in-progress': return 'En cours';
-        case 'pending': return 'En attente';
+        case 'done': return 'Terminé';
+        case 'in_progress': return 'En cours';
+        case 'todo': return 'En attente';
         default: return 'À venir';
       }
     };

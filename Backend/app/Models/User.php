@@ -58,6 +58,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     public function preferences(): HasOne
     {
         return $this->hasOne(UserPreference::class);
@@ -82,6 +87,16 @@ class User extends Authenticatable
     public function teamMemberships(): HasMany
     {
         return $this->hasMany(TeamMember::class);
+    }
+
+    public function brainDumps(): HasMany
+    {
+        return $this->hasMany(BrainDump::class);
+    }
+
+    public function focusSessions(): HasMany
+    {
+        return $this->hasMany(FocusSession::class);
     }
 
     public function teams(): BelongsToMany

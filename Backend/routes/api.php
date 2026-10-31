@@ -7,14 +7,29 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TimeEntryController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PushNotificationController;
 use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\LabelController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\TaskCommentController;
 use App\Http\Controllers\Api\AutomationRuleController;
 use App\Http\Controllers\Api\InvitationController;
+use App\Http\Controllers\Api\PublicApiController;
+use App\Http\Controllers\Api\SocialiteAuthController;
+use App\Http\Controllers\Api\BrainDumpController;
+use App\Http\Controllers\Api\FocusController;
 
 // ── Routes publiques avec rate limiting ──────────────────────
+
+// OAuth Providers (doit être AVANT /auth/{provider} pour ne pas être shadowé)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/auth/providers', [SocialiteAuthController::class, 'getProviders']);
+    Route::delete('/auth/providers/{provider}', [SocialiteAuthController::class, 'unlinkProvider']);
+});
+
+// OAuth Social Login (Google/Facebook)
+Route::get('/auth/{provider}', [SocialiteAuthController::class, 'redirect']);
+Route::get('/auth/{provider}/callback', [SocialiteAuthController::class, 'callback']);
 
 // Max 10 tentatives d'inscription par minute par IP
 Route::post('/register', [AuthController::class, 'register'])
@@ -80,6 +95,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/time-entries/stats', [TimeEntryController::class, 'stats']);
     Route::apiResource('time-entries', TimeEntryController::class);
 
+    // Focus Sessions (Bloc C)
+    Route::post('/focus/sessions', [FocusController::class, 'store']);
+    Route::patch('/focus/sessions/{session}/stop', [FocusController::class, 'stop']);
+    Route::get('/focus/sessions/today', [FocusController::class, 'todaySessions']);
+    Route::get('/focus/report/today', [FocusController::class, 'dailyReport']);
+
+    // Push notifications (abonnement Web Push) — AVANT /notifications/{notification}
+    Route::post('/notifications/subscribe', [PushNotificationController::class, 'subscribe']);
+    Route::delete('/notifications/subscribe', [PushNotificationController::class, 'unsubscribe']);
+
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications', [NotificationController::class, 'store']);
@@ -103,11 +128,34 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/comments/{comment}', [TaskCommentController::class, 'destroy']);
 });
 
+// ── Brain Dump & Planning du jour ─────────────────────────────
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+    Route::post('/brain-dump', [BrainDumpController::class, 'store']);
+    Route::put('/brain-dump/items/{itemId}', [BrainDumpController::class, 'updateItem']);
+    Route::post('/brain-dump/{brainDumpId}/confirm', [BrainDumpController::class, 'confirm']);
+    Route::get('/planning/today', [BrainDumpController::class, 'planningToday']);
+});
+
 // Invitations (publique + protégée)
 Route::get('/invitations/{token}', [InvitationController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invitations/{token}/accept', [InvitationController::class, 'accept']);
+});
+
+// ── API Publique (données partagées) ─────────────────────────
+Route::middleware('throttle:100,1')->group(function () {
+    // Documentation API
+    Route::get('/public/docs', [PublicApiController::class, 'docs']);
+    
+    // Planning public
+    Route::get('/public/planning/{userId}', [PublicApiController::class, 'getPlanning']);
+    
+    // Statistiques publiques
+    Route::get('/public/stats/{userId}', [PublicApiController::class, 'getStats']);
+    
+    // Projets publics
+    Route::get('/public/projects/{userId}', [PublicApiController::class, 'getProjects']);
 });
 
 // Health check

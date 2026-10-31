@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/axios';
+import { offlineStorage } from '../lib/offlineStorage';
 
 interface Task {
   id: number;
@@ -24,6 +25,7 @@ interface UseTasksReturn {
   tasks: Task[];
   loading: boolean;
   error: string | null;
+  isOffline: boolean;
   fetchTasks: () => Promise<void>;
   createTask: (data: Partial<Task>) => Promise<Task>;
   updateTask: (id: number, data: Partial<Task>) => Promise<Task>;
@@ -36,15 +38,36 @@ export const useTasks = (): UseTasksReturn => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
+    
     try {
-      const response = await api.get('/tasks');
-      setTasks(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors du chargement des tâches');
+      if (navigator.onLine) {
+        const response = await api.get('/tasks');
+        const tasksData = response.data;
+        setTasks(tasksData);
+        offlineStorage.setCache('tasks', tasksData);
+      } else {
+        const cached = offlineStorage.getCache<Task[]>('tasks');
+        if (cached) {
+          setTasks(cached);
+        } else {
+          setError('Pas de connexion et pas de données en cache');
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des tâches';
+      setError(errorMessage);
+      
+      // Fallback to cache on error
+      const cached = offlineStorage.getCache<Task[]>('tasks');
+      if (cached) {
+        setTasks(cached);
+        setIsOffline(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,34 +76,81 @@ export const useTasks = (): UseTasksReturn => {
   const createTask = async (data: Partial<Task>): Promise<Task> => {
     const { subtasks, ...taskData } = data as Task & { subtasks?: { title: string }[] };
     
-    const response = await api.post('/tasks', taskData);
-    const parentTask = response.data;
-    
-    if (subtasks && subtasks.length > 0) {
-      for (const subtask of subtasks) {
-        const subtaskData = {
-          ...taskData,
-          title: subtask.title,
-          parent_id: parentTask.id,
-          status: 'todo',
-        };
-        await api.post('/tasks', subtaskData);
-      }
+    if (navigator.onLine) {
+      const response = await api.post('/tasks', {
+        ...taskData,
+        ...(subtasks && subtasks.length > 0 ? { subtasks } : {}),
+      });
+      const parentTask = response.data;
+
+      await fetchTasks();
+      return parentTask;
+    } else {
+      // Offline: create locally
+      const newTask: Task = {
+        ...taskData,
+        id: Date.now(),
+        parent_id: taskData.parent_id || null,
+        is_completed: taskData.is_completed || false,
+        order: taskData.order || 0,
+        subtasks: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Task;
+      
+      setTasks(prev => [newTask, ...prev]);
+      offlineStorage.setCache('tasks', [newTask, ...tasks]);
+      
+      offlineStorage.addPendingAction({
+        type: 'create',
+        endpoint: '/tasks',
+        data: { ...taskData, ...(subtasks && subtasks.length > 0 ? { subtasks } : {}) },
+      });
+      
+      return newTask;
     }
-    
-    await fetchTasks();
-    return parentTask;
   };
 
   const updateTask = async (id: number, data: Partial<Task>): Promise<Task> => {
-    const response = await api.put(`/tasks/${id}`, data);
-    setTasks(prev => prev.map(t => t.id === id ? response.data : t));
-    return response.data;
+    if (navigator.onLine) {
+      const response = await api.put(`/tasks/${id}`, data);
+      setTasks(prev => prev.map(t => t.id === id ? response.data : t));
+      return response.data;
+    } else {
+      // Offline: update locally
+      const updatedTask = tasks.find(t => t.id === id);
+      if (!updatedTask) throw new Error('Task not found');
+      
+      const merged = { ...updatedTask, ...data, updated_at: new Date().toISOString() };
+      setTasks(prev => prev.map(t => t.id === id ? merged : t));
+      offlineStorage.setCache('tasks', tasks.map(t => t.id === id ? merged : t));
+      
+      offlineStorage.addPendingAction({
+        type: 'update',
+        endpoint: '/tasks',
+        resourceId: id,
+        data: { id, ...data },
+      });
+      
+      return merged;
+    }
   };
 
   const deleteTask = async (id: number): Promise<void> => {
-    await api.delete(`/tasks/${id}`);
-    setTasks(prev => prev.filter(t => t.id !== id));
+    if (navigator.onLine) {
+      await api.delete(`/tasks/${id}`);
+      setTasks(prev => prev.filter(t => t.id !== id));
+    } else {
+      // Offline: delete locally
+      setTasks(prev => prev.filter(t => t.id !== id));
+      offlineStorage.setCache('tasks', tasks.filter(t => t.id !== id));
+      
+      offlineStorage.addPendingAction({
+        type: 'delete',
+        endpoint: '/tasks',
+        resourceId: id,
+      });
+    }
   };
 
   const getSubtasks = (parentId: number): Task[] => {
@@ -88,15 +158,25 @@ export const useTasks = (): UseTasksReturn => {
   };
 
   const toggleSubtaskComplete = async (taskId: number, isCompleted: boolean): Promise<void> => {
-    const response = await api.put(`/tasks/${taskId}`, { is_completed: isCompleted });
-    setTasks(prev => prev.map(t => t.id === taskId ? response.data : t));
+    await updateTask(taskId, { is_completed: isCompleted });
   };
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
     fetchTasks();
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [fetchTasks]);
 
-  return { tasks, loading, error, fetchTasks, createTask, updateTask, deleteTask, getSubtasks, toggleSubtaskComplete };
+  return { tasks, loading, error, isOffline, fetchTasks, createTask, updateTask, deleteTask, getSubtasks, toggleSubtaskComplete };
 };
 
 export type { Task };

@@ -24,9 +24,8 @@ type ZoomLevel = 'day' | 'week' | 'month';
 
 const STATUS_COLORS: Record<string, string> = {
   'todo': 'bg-blue-500',
-  'in-progress': 'bg-amber-500',
-  'completed': 'bg-emerald-500',
-  'pending': 'bg-gray-400',
+  'in_progress': 'bg-amber-500',
+  'done': 'bg-emerald-500',
 };
 
 const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
@@ -269,7 +268,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                               left,
                               width: Math.max(dayWidth, width),
                               backgroundColor: task.projectColor || '#00B4DB',
-                              opacity: task.status === 'completed' ? 0.5 : 0.85,
+                              opacity: task.status === 'done' ? 0.5 : 0.85,
                             }}
                             onClick={() => onTaskClick(task)}
                           >
@@ -301,9 +300,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
         <span className="font-medium">Légende:</span>
         {Object.entries({
           'todo': 'À faire',
-          'in-progress': 'En cours',
-          'completed': 'Terminé',
-          'pending': 'En attente',
+          'in_progress': 'En cours',
+          'done': 'Terminé',
         }).map(([status, label]) => (
           <span key={status} className="flex items-center gap-1.5">
             <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[status]}`} />

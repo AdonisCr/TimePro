@@ -18,6 +18,7 @@ class UserPreference extends Model
         'peak_productivity_hours',
         'task_duration_preference',
         'work_style',
+        'focus_method',
         'has_recurring_tasks',
         'goals',
         'daily_time_dedication',
@@ -42,6 +43,9 @@ class UserPreference extends Model
         'other_tools_used',
         'specific_constraints',
         'onboarding_completed',
+        'public_planning',
+        'public_stats',
+        'public_projects',
     ];
 
     protected function casts(): array
@@ -62,6 +66,9 @@ class UserPreference extends Model
             'has_routines' => 'boolean',
             'has_hobbies_to_plan' => 'boolean',
             'onboarding_completed' => 'boolean',
+            'public_planning' => 'boolean',
+            'public_stats' => 'boolean',
+            'public_projects' => 'boolean',
         ];
     }
 

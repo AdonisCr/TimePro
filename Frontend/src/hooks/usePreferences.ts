@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/axios';
+import type { FocusMethod } from '../lib/focus';
 
 interface UserPreferences {
   id?: number;
@@ -10,6 +11,7 @@ interface UserPreferences {
   peak_productivity_hours?: 'morning' | 'afternoon' | 'evening' | 'night' | null;
   task_duration_preference?: 'short' | 'medium' | 'long' | 'very_long' | null;
   work_style?: 'pomodoro' | 'continuous' | null;
+  focus_method?: FocusMethod | null;
   has_recurring_tasks?: boolean;
   goals?: string[] | null;
   daily_time_dedication?: string | null;
@@ -55,8 +57,9 @@ export const usePreferences = (): UsePreferencesReturn => {
     try {
       const response = await api.get('/preferences');
       setPreferences(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors du chargement des preferences');
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(message || 'Erreur lors du chargement des preferences');
     } finally {
       setLoading(false);
     }

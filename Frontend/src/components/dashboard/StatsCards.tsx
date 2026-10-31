@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Clock, FolderOpen, Timer, TrendingUp, Zap, CheckCircle, Play } from 'lucide-react';
+import { Target, FolderOpen, Timer, TrendingUp, Play } from 'lucide-react';
 
 interface TaskItem {
   id: number;
@@ -32,9 +32,9 @@ interface StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsProps> = ({ tasks = [], projects = [], timeEntries = [] }) => {
   const totalTasks = tasks.length;
-  const inProgressTasks = tasks.filter(task => task.status === 'in-progress').length;
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
-  const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+  const inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
+  const completedTasks = tasks.filter(task => task.status === 'done').length;
+  const pendingTasks = tasks.filter(task => task.status === 'todo').length;
   
   const totalProjects = projects.length;
   const activeProjects = projects.filter((p: ProjectItem) => p.status === 'active').length;

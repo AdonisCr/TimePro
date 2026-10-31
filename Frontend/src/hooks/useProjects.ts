@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/axios';
+import { offlineStorage } from '../lib/offlineStorage';
 
 interface Project {
   id: number;
@@ -22,6 +23,7 @@ interface UseProjectsReturn {
   projects: Project[];
   loading: boolean;
   error: string | null;
+  isOffline: boolean;
   fetchProjects: () => Promise<void>;
   createProject: (data: Partial<Project>) => Promise<Project>;
   updateProject: (id: number, data: Partial<Project>) => Promise<Project>;
@@ -32,42 +34,125 @@ export const useProjects = (): UseProjectsReturn => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
+    
     try {
-      const response = await api.get('/projects');
-      setProjects(response.data.data ?? response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors du chargement des projets');
+      if (navigator.onLine) {
+        const response = await api.get('/projects');
+        const projectsData = response.data.data ?? response.data;
+        setProjects(projectsData);
+        offlineStorage.setCache('projects', projectsData);
+      } else {
+        const cached = offlineStorage.getCache<Project[]>('projects');
+        if (cached) {
+          setProjects(cached);
+        } else {
+          setError('Pas de connexion et pas de données en cache');
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des projets';
+      setError(errorMessage);
+      
+      const cached = offlineStorage.getCache<Project[]>('projects');
+      if (cached) {
+        setProjects(cached);
+        setIsOffline(true);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   const createProject = async (data: Partial<Project>): Promise<Project> => {
-    const response = await api.post('/projects', data);
-    setProjects(prev => [response.data, ...prev]);
-    return response.data;
+    if (navigator.onLine) {
+      const response = await api.post('/projects', data);
+      setProjects(prev => [response.data, ...prev]);
+      return response.data;
+    } else {
+      const newProject: Project = {
+        ...data,
+        id: Date.now(),
+        spent_seconds: 0,
+        budget_usage_percent: 0,
+        budget_status: 'none',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Project;
+      
+      setProjects(prev => [newProject, ...prev]);
+      offlineStorage.setCache('projects', [newProject, ...projects]);
+      
+      offlineStorage.addPendingAction({
+        type: 'create',
+        endpoint: '/projects',
+        data,
+      });
+      
+      return newProject;
+    }
   };
 
   const updateProject = async (id: number, data: Partial<Project>): Promise<Project> => {
-    const response = await api.put(`/projects/${id}`, data);
-    setProjects(prev => prev.map(p => p.id === id ? response.data : p));
-    return response.data;
+    if (navigator.onLine) {
+      const response = await api.put(`/projects/${id}`, data);
+      setProjects(prev => prev.map(p => p.id === id ? response.data : p));
+      return response.data;
+    } else {
+      const updated = projects.find(p => p.id === id);
+      if (!updated) throw new Error('Project not found');
+      
+      const merged = { ...updated, ...data, updated_at: new Date().toISOString() };
+      setProjects(prev => prev.map(p => p.id === id ? merged : p));
+      offlineStorage.setCache('projects', projects.map(p => p.id === id ? merged : p));
+      
+      offlineStorage.addPendingAction({
+        type: 'update',
+        endpoint: '/projects',
+        resourceId: id,
+        data: { id, ...data },
+      });
+      
+      return merged;
+    }
   };
 
   const deleteProject = async (id: number): Promise<void> => {
-    await api.delete(`/projects/${id}`);
-    setProjects(prev => prev.filter(p => p.id !== id));
+    if (navigator.onLine) {
+      await api.delete(`/projects/${id}`);
+      setProjects(prev => prev.filter(p => p.id !== id));
+    } else {
+      setProjects(prev => prev.filter(p => p.id !== id));
+      offlineStorage.setCache('projects', projects.filter(p => p.id !== id));
+      
+      offlineStorage.addPendingAction({
+        type: 'delete',
+        endpoint: '/projects',
+        resourceId: id,
+      });
+    }
   };
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
     fetchProjects();
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [fetchProjects]);
 
-  return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject };
+  return { projects, loading, error, isOffline, fetchProjects, createProject, updateProject, deleteProject };
 };
 
 export type { Project };

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
@@ -10,34 +11,59 @@ import Projects from '../components/dashboard/Projects';
 import Tools from '../components/dashboard/Tools';
 import Inbox from '../components/dashboard/Inbox';
 import Settings from '../components/dashboard/Settings';
-import AddTaskModal from '../components/dashboard/AddTaskModal';
+import AddTaskModal, { type NewTaskPayload } from '../components/dashboard/AddTaskModal';
 import AddProjectModal from '../components/dashboard/AddProjectModal';
 import TaskList from '../components/dashboard/TaskList';
 import KanbanBoard from '../components/dashboard/KanbanBoard';
 import GanttChart from '../components/dashboard/GanttChart';
 import ExportButton from '../components/dashboard/ExportButton';
-import TaskDetailModal from '../components/dashboard/TaskDetailModal';
+import TaskDetailModal, { type TaskUpdatePayload } from '../components/dashboard/TaskDetailModal';
 import Workload from '../components/dashboard/Workload';
 import Automations from '../components/dashboard/Automations';
 import TeamSettings from '../components/dashboard/TeamSettings';
-import { useTasks } from '../hooks/useTasks';
+import CoachCard from '../components/dashboard/CoachCard';
+import HabitsPage from './HabitsPage';
+import PlanningPage from './PlanningPage';
+import WeeklyReport from './WeeklyReport';
+import MonthlyGoals from './MonthlyGoals';
+import { useTasks, type Task as ApiTask } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useUser } from '../hooks/useUser';
 import { useTimeEntries } from '../hooks/useTimeEntries';
+import { generateInsights } from '../lib/productivity';
+import { getTodayReport, type FocusMethod } from '../lib/focus';
 
 interface TaskItem {
   id: number;
   title: string;
-  description?: string;
+  description?: string | null;
   priority: string;
   status: string;
-  dueDate?: string;
-  dueTime?: string;
+  dueDate?: string | null;
+  dueTime?: string | null;
   assignee?: string;
   project?: string;
 }
 
+const toTaskItem = (task: ApiTask): TaskItem => ({
+  id: task.id,
+  title: task.title,
+  description: task.description,
+  priority: task.priority,
+  status: task.status,
+  dueDate: task.due_date,
+  assignee: undefined,
+  project: task.project?.name,
+});
+
+const PAGE_ROUTES: Record<string, string> = {
+  calendar: '/calendar',
+  export: '/export',
+  'share-planning': '/share-planning',
+};
+
 function Dashboard() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
@@ -61,7 +87,28 @@ function Dashboard() {
   const { projects, loading: projectsLoading, createProject } = useProjects();
   const { entries: timeEntries } = useTimeEntries();
 
-  const handleAddTask = async (taskData: any) => {
+  const [focusByMethod, setFocusByMethod] = useState<
+    Partial<Record<FocusMethod, number>> | undefined
+  >(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTodayReport()
+      .then((report) => {
+        if (!cancelled) setFocusByMethod(report.by_method);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const insights = useMemo(
+    () => generateInsights(tasks, focusByMethod),
+    [tasks, focusByMethod]
+  );
+
+  const handleAddTask = async (taskData: NewTaskPayload) => {
     try {
       await createTask({
         title: taskData.title,
@@ -82,13 +129,13 @@ function Dashboard() {
   };
 
   const handleViewTask = (task: TaskItem) => {
-    setSelectedTask(task);
+    setSelectedTask(task as unknown as TaskItem);
     setIsTaskDetailOpen(true);
   };
 
-  const handleUpdateTask = async (id: number, data: any) => {
+  const handleUpdateTask = async (id: number, data: TaskUpdatePayload) => {
     try {
-      await updateTask(id, data);
+      await updateTask(id, data as Partial<ApiTask>);
       await fetchTasks();
     } catch {
       console.error('Erreur mise à jour');
@@ -105,14 +152,14 @@ function Dashboard() {
     }
   };
 
-  const handleAddProject = async (projectData: any) => {
+  const handleAddProject = async (projectData: Record<string, unknown>) => {
     try {
       await createProject({
-        name: projectData.name,
-        description: projectData.description || null,
-        color: projectData.color || '#00B4DB',
-        deadline: projectData.deadline || null,
-        time_budget: projectData.time_budget || null,
+        name: projectData.name as string,
+        description: (projectData.description as string) || null,
+        color: (projectData.color as string) || '#00B4DB',
+        deadline: (projectData.deadline as string) || null,
+        time_budget: projectData.time_budget ? Number(projectData.time_budget) : null,
         status: 'active',
       });
     } catch {
@@ -123,14 +170,14 @@ function Dashboard() {
   const apiTasks = tasks.map(task => ({
     id: task.id,
     title: task.title,
-    description: task.description,
+    description: task.description || undefined,
     project: task.project?.name || 'No Project',
     projectColor: task.project?.color,
     priority: task.priority,
-    start_date: task.start_date,
-    dueDate: task.due_date,
-    estimated_duration: task.estimated_duration,
-    status: task.status === 'todo' ? 'pending' : task.status === 'in_progress' ? 'in-progress' : 'completed',
+    start_date: task.start_date || undefined,
+    dueDate: task.due_date || undefined,
+    estimated_duration: task.estimated_duration ?? undefined,
+    status: task.status,
   }));
 
   const renderCurrentPage = () => {
@@ -169,13 +216,31 @@ function Dashboard() {
         return <Inbox />;
       case 'settings':
         return <Settings user={user} onLogout={logout} onProfileUpdate={refreshUser} />;
+      case 'habits':
+        return <HabitsPage />;
+      case 'planning':
+        return <PlanningPage tasks={tasks} />;
+      case 'weekly-report':
+        return <WeeklyReport tasks={tasks} timeEntries={timeEntries} />;
+      case 'monthly-goals':
+        return <MonthlyGoals />;
       default:
         return (
           <>
             <WelcomeSection userName={user?.name || 'User'} />
+            
+            {/* Coach insights */}
+            <CoachCard insights={insights} />
+            
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <StatsCards tasks={apiTasks} projects={projects} timeEntries={timeEntries} />
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/planning')}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  📅 Planning
+                </button>
                 <ExportButton
                   data={apiTasks.map(t => ({ 'Tâche': t.title, 'Projet': t.project || '', 'Statut': t.status, 'Priorité': t.priority, 'Échéance': t.dueDate || '' }))}
                   filename="taches"
@@ -204,7 +269,7 @@ function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 {viewMode === 'kanban' ? (
-                  <KanbanBoard tasks={tasks} onTaskClick={handleViewTask} />
+                  <KanbanBoard tasks={tasks as unknown as ApiTask[]} onTaskClick={handleViewTask as unknown as (task: ApiTask) => void} />
                 ) : (
                   <Analytics tasks={apiTasks} />
                 )}
@@ -248,10 +313,16 @@ function Dashboard() {
           <Sidebar 
             currentPage={currentPage} 
             setCurrentPage={(page) => {
-              setCurrentPage(page);
+              const route = PAGE_ROUTES[page];
+              if (route) {
+                navigate(route);
+              } else {
+                setCurrentPage(page);
+              }
               setSidebarOpen(false);
             }}
             onAddTask={() => setIsAddTaskModalOpen(true)}
+            onBrainDump={() => navigate('/brain-dump')}
             user={user}
             onLogout={logout}
             onClose={() => setSidebarOpen(false)}
@@ -289,7 +360,7 @@ function Dashboard() {
       />
 
       <TaskDetailModal
-        task={selectedTask}
+        task={selectedTask ? toTaskItem(selectedTask) : null}
         isOpen={isTaskDetailOpen}
         onClose={() => setIsTaskDetailOpen(false)}
         onUpdate={handleUpdateTask}

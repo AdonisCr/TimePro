@@ -29,6 +29,7 @@ class UserPreferenceController extends Controller
             'peak_productivity_hours' => ['nullable', 'in:morning,afternoon,evening,night'],
             'task_duration_preference' => ['nullable', 'in:short,medium,long,very_long'],
             'work_style' => ['nullable', 'in:pomodoro,continuous'],
+            'focus_method' => ['nullable', 'in:pomodoro,deep_work,flowtime,fifty_two_seventeen,timebox'],
             'has_recurring_tasks' => ['nullable', 'boolean'],
             'goals' => ['nullable', 'array'],
             'daily_time_dedication' => ['nullable', 'string', 'max:50'],

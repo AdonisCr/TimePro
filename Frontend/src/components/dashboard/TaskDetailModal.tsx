@@ -26,18 +26,28 @@ interface Project {
   color: string;
 }
 
+export interface TaskUpdatePayload {
+  title?: string;
+  description?: string | null;
+  priority?: string;
+  status?: string;
+  due_date?: string | null;
+  project_id?: number | null;
+  is_completed?: boolean;
+}
+
 interface TaskDetailModalProps {
   task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: (id: number, data: any) => Promise<void>;
+  onUpdate: (id: number, data: TaskUpdatePayload) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   projects?: Project[];
 }
 
-const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose, onUpdate, onDelete, projects = [] }) => {
+const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<TaskUpdatePayload>({});
   const [newComment, setNewComment] = useState('');
   const { comments, fetchComments, addComment, deleteComment } = useTaskComments();
 
@@ -53,7 +63,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, isOpen, onClose
       });
       fetchComments(task.id);
     }
-  }, [task]);
+  }, [task, fetchComments]);
 
   const handleSave = async () => {
     if (task) {

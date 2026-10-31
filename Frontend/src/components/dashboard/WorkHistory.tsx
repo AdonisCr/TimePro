@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, Filter, Download, Search, Loader2 } from 'lucide-react';
+import { Clock, Download, Search, Loader2 } from 'lucide-react';
 import { useTimeEntries } from '../../hooks/useTimeEntries';
 import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
 
-interface WorkHistoryProps {
-}
-
-const WorkHistory: React.FC<WorkHistoryProps> = () => {
+const WorkHistory: React.FC = () => {
   const { entries, loading } = useTimeEntries();
   const { projects } = useProjects();
   const { tasks } = useTasks();
@@ -15,7 +12,7 @@ const WorkHistory: React.FC<WorkHistoryProps> = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
-  const [exporting, setExporting] = useState(false);
+  const [exporting] = useState(false);
 
   const getProjectName = (id: number | null) => {
     if (!id) return 'Sans projet';

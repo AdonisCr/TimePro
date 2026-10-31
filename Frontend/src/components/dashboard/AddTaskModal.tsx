@@ -12,10 +12,24 @@ interface Task {
   title: string;
 }
 
+export interface NewTaskPayload {
+  title: string;
+  description: string;
+  project_id: number | null;
+  priority: string;
+  due_date: string;
+  recurrence: string;
+  recurrence_end_date: string;
+  parent_id: number | null;
+  depends_on: number | null;
+  status?: string;
+  subtasks?: { title: string }[];
+}
+
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (task: any) => void;
+  onSubmit: (task: NewTaskPayload) => void;
   projects?: Project[];
   tasks?: Task[];
 }

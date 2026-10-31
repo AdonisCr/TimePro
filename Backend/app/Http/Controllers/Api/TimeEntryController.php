@@ -76,7 +76,7 @@ class TimeEntryController extends Controller
         if (isset($validated['start_time']) && isset($validated['end_time']) && !isset($validated['duration'])) {
             $start = \Carbon\Carbon::parse($validated['start_time']);
             $end = \Carbon\Carbon::parse($validated['end_time']);
-            $validated['duration'] = $end->diffInSeconds($start);
+            $validated['duration'] = abs($end->diffInSeconds($start));
         }
 
         $entry = $request->user()->timeEntries()->create($validated);
@@ -126,7 +126,7 @@ class TimeEntryController extends Controller
         if (isset($validated['start_time']) && isset($validated['end_time']) && !isset($validated['duration'])) {
             $start = \Carbon\Carbon::parse($validated['start_time']);
             $end = \Carbon\Carbon::parse($validated['end_time']);
-            $validated['duration'] = $end->diffInSeconds($start);
+            $validated['duration'] = abs($end->diffInSeconds($start));
         }
 
         $timeEntry->update($validated);

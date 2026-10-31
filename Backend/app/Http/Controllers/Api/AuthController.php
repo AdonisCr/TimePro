@@ -138,7 +138,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Lien de vérification invalide.'], 403);
         }
 
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
 
         if ($user->hasVerifiedEmail()) {
             return redirect($frontendUrl . '/login?already_verified=1');

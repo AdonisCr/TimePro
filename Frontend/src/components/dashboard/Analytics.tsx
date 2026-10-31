@@ -1,19 +1,29 @@
 import React from 'react';
 import { TrendingUp, Users, BarChart3 } from 'lucide-react';
 
+interface AnalyticsTask {
+  project?: string;
+  status: string;
+}
+
 interface AnalyticsProps {
-  tasks: any[];
+  tasks: AnalyticsTask[];
+}
+
+interface ProjectStat {
+  total: number;
+  completed: number;
 }
 
 const Analytics: React.FC<AnalyticsProps> = ({ tasks }) => {
   // Calculate project progress from real tasks
-  const projectStats = tasks.reduce((acc: any, task) => {
+  const projectStats = tasks.reduce<Record<string, ProjectStat>>((acc, task) => {
     const projectName = task.project || 'other';
     if (!acc[projectName]) {
       acc[projectName] = { total: 0, completed: 0 };
     }
     acc[projectName].total++;
-    if (task.status === 'completed') {
+    if (task.status === 'done') {
       acc[projectName].completed++;
     }
     return acc;

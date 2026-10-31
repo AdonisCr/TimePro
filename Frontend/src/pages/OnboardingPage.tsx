@@ -127,6 +127,7 @@ const checkCard = (
         : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
     }`}
   >
+    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
       checked ? 'bg-[#00B4DB] border-[#00B4DB]' : 'border-white/30'
     }`}>
@@ -164,15 +165,16 @@ const OnboardingPage = () => {
     has_routines: false,
     has_hobbies_to_plan: false,
   });
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updatePreference = (key: keyof Preferences, value: any) => {
-    setPreferences(prev => ({ ...prev, [key]: value }));
+  const updatePreference = (key: keyof Preferences, value: unknown) => {
+    setPreferences(prev => ({ ...prev, [key]: value as Preferences[typeof key] }));
   };
 
   const toggleArrayPreference = (key: keyof Preferences, value: string) => {
-    const current = (preferences[key] as string[]) || [];
+    const current = ((preferences[key] as unknown) as string[]) || [];
     const updated = current.includes(value)
       ? current.filter(v => v !== value)
       : [...current, value];
@@ -186,10 +188,19 @@ const OnboardingPage = () => {
     setLoading(true);
     setError(null);
     try {
+      const trimmedName = name.trim();
+      if (trimmedName) {
+        const userResponse = await api.get<{ email: string }>('/user');
+        const email = userResponse.data?.email;
+        if (email) {
+          await api.put('/user', { name: trimmedName, email });
+        }
+      }
       await api.put('/preferences', { ...preferences, onboarding_completed: true });
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError((message as string) || 'Erreur lors de la sauvegarde');
     } finally {
       setLoading(false);
     }
@@ -244,8 +255,8 @@ const OnboardingPage = () => {
                 <label className="block text-sm font-medium text-white/80 mb-2">Votre nom</label>
                 <input
                   type="text"
-                  value={preferences.name || ''}
-                  onChange={e => updatePreference('name', e.target.value)}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 outline-none transition-all focus:border-[#00B4DB] focus:bg-white/10 focus:shadow-[0_0_20px_rgba(0,180,219,0.1)]"
                   placeholder="ex: Jean Dupont"
                 />

@@ -66,6 +66,20 @@ class TaskController extends Controller
         }
 
         $task = $request->user()->tasks()->create($validated);
+
+        $subtasks = $request->input('subtasks', []);
+        if (is_array($subtasks)) {
+            foreach ($subtasks as $subtask) {
+                if (is_array($subtask) && !empty($subtask['title'])) {
+                    $task->subtasks()->create([
+                        'title' => $subtask['title'],
+                        'user_id' => $request->user()->id,
+                        'status' => 'todo',
+                    ]);
+                }
+            }
+        }
+
         $task->load('project', 'subtasks');
         return response()->json($task, 201);
     }
@@ -130,7 +144,32 @@ class TaskController extends Controller
 
         $task->update($validated);
         $task->load('project', 'subtasks');
+
+        if (($validated['status'] ?? null) === 'done' && $task->wasChanged('status')) {
+            $this->sendTaskDonePush($task);
+        }
+
         return response()->json($task);
+    }
+
+    /**
+     * Push best-effort quand une tâche passe à "done" (ne casse jamais le flux).
+     */
+    private function sendTaskDonePush(Task $task): void
+    {
+        try {
+            PushNotificationController::sendToUser(
+                $task->user,
+                'Tâche terminée 🎉',
+                'Bravo ! Tu as terminé : ' . $task->title,
+                ['task_id' => $task->id, 'type' => 'task_done']
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Push task_done échouée', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function destroy(Request $request, Task $task): JsonResponse
@@ -162,6 +201,10 @@ class TaskController extends Controller
                     'status' => $taskData['status'],
                     'order' => $taskData['order'] ?? $task->order,
                 ]);
+
+                if ($taskData['status'] === 'done' && $task->wasChanged('status')) {
+                    $this->sendTaskDonePush($task);
+                }
             }
         }
 

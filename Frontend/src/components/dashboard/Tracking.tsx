@@ -5,7 +5,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
 
 interface TrackingProps {
-  tasks?: any[];
+  tasks?: unknown[];
 }
 
 const Tracking: React.FC<TrackingProps> = () => {

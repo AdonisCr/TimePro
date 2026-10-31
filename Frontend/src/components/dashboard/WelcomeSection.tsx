@@ -1,11 +1,14 @@
 import React from 'react';
-import { ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface WelcomeSectionProps {
   userName?: string;
 }
 
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ userName = 'User' }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-8 border border-primary/20">
       <div className="flex items-center justify-between">
@@ -17,10 +20,19 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ userName = 'User' }) =>
             Gérez vos tâches, suivez votre progression et optimisez votre 
             productivité avec TimePro. Restez organisé et atteignez vos objectifs.
           </p>
-          <button className="inline-flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-hover transition-colors">
-            <span>En savoir plus</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => navigate('/brain-dump')}
+              className="inline-flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-hover transition-colors"
+            >
+              <Brain className="w-5 h-5" />
+              <span>Vider mon esprit</span>
+            </button>
+            <button className="inline-flex items-center space-x-2 border-2 border-gray-200 text-text-dark px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+              <span>En savoir plus</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
         <div className="hidden lg:block flex-shrink-0 ml-8">

@@ -13,6 +13,14 @@ import {
   Users,
   Zap,
   Timer,
+  Brain,
+  Repeat,
+  Target,
+  Calendar,
+  CalendarDays,
+  Trophy,
+  Share2,
+  Download,
 } from 'lucide-react';
 
 interface UserData {
@@ -26,6 +34,7 @@ interface SidebarProps {
   currentPage: string;
   setCurrentPage: (page: string) => void;
   onAddTask: () => void;
+  onBrainDump?: () => void;
   user?: UserData | null;
   onLogout: () => void;
   onClose?: () => void;
@@ -42,7 +51,7 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTask, user, onLogout, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTask, onBrainDump, user, onLogout, onClose }) => {
   const groups: MenuGroup[] = [
     {
       items: [
@@ -53,6 +62,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTas
       label: 'Suivi',
       items: [
         { icon: Timer, label: 'Suivi du temps', id: 'tracking' },
+        { icon: Repeat, label: 'Habitudes', id: 'habits' },
+        { icon: Target, label: 'Planning', id: 'planning' },
+        { icon: Calendar, label: 'Rapport', id: 'weekly-report' },
+        { icon: Trophy, label: 'Objectifs', id: 'monthly-goals' },
+        { icon: CalendarDays, label: 'Calendrier', id: 'calendar' },
       ],
     },
     {
@@ -75,6 +89,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTas
       items: [
         { icon: Wrench, label: 'Outils', id: 'tools' },
         { icon: Inbox, label: 'Boîte de réception', id: 'inbox' },
+        { icon: Share2, label: 'Partager le planning', id: 'share-planning' },
+        { icon: Download, label: 'Exporter', id: 'export' },
         { icon: Settings, label: 'Paramètres', id: 'settings' },
       ],
     },
@@ -115,6 +131,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTas
           <span>Déconnexion</span>
         </button>
       </div>
+
+      {/* Brain Dump CTA */}
+      {onBrainDump && (
+        <div className="p-3">
+          <button
+            onClick={onBrainDump}
+            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-2.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <Brain className="w-4 h-4" />
+            <span>Vider mon esprit</span>
+          </button>
+        </div>
+      )}
 
       <nav className="flex-1 p-3 overflow-y-auto">
         {groups.map((group, gi) => (

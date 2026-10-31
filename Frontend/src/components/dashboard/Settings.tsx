@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { User, Bell, Shield, Save, Eye, EyeOff, LogOut, Camera, Moon, Sun, Loader2, Check, ZoomIn, ZoomOut } from 'lucide-react';
+import { User, Bell, Shield, Save, Eye, EyeOff, LogOut, Camera, Moon, Sun, Monitor, Loader2, Check, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '../../lib/axios';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -18,7 +18,7 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -264,22 +264,43 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
 
             <div className="border-t border-gray-100 pt-6">
               <h4 className="font-semibold text-text-dark mb-4">Apparence</h4>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-3">
-                  {theme === 'dark' ? <Moon className="w-5 h-5 text-text-dark" /> : <Sun className="w-5 h-5 text-text-dark" />}
-                  <div>
-                    <p className="font-medium text-text-dark text-sm">Mode sombre</p>
-                    <p className="text-xs text-text-soft">Activer le thème sombre pour l'interface</p>
-                  </div>
-                </div>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={toggleTheme}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-gray-300'}`}
+                  onClick={() => setTheme('light')}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
+                    theme === 'light' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${theme === 'dark' ? 'translate-x-6' : ''}`} />
+                  <Sun className={`w-6 h-6 ${theme === 'light' ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${theme === 'light' ? 'text-primary' : 'text-text-dark'}`}>Clair</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('auto')}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
+                    theme === 'auto' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Monitor className={`w-6 h-6 ${theme === 'auto' ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${theme === 'auto' ? 'text-primary' : 'text-text-dark'}`}>Auto</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
+                    theme === 'dark' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Moon className={`w-6 h-6 ${theme === 'dark' ? 'text-primary' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-primary' : 'text-text-dark'}`}>Sombre</span>
                 </button>
               </div>
+              <p className="text-xs text-text-soft mt-2 text-center">
+                {theme === 'auto' ? '🌙 Passera en mode sombre automatiquement entre 20h et 7h' : 
+                 theme === 'dark' ? '🌙 Mode sombre activé en permanence' : 
+                 '☀️ Mode clair activé en permanence'}
+              </p>
             </div>
 
             {success && <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700">{success}</div>}

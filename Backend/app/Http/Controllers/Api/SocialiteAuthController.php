@@ -7,8 +7,9 @@ use App\Models\User;
 use App\Models\UserProvider;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -31,70 +32,120 @@ class SocialiteAuthController extends Controller
      * Handle callback from provider
      * GET /api/auth/{provider}/callback
      */
-    public function callback(string $provider): JsonResponse|RedirectResponse
+    public function callback(string $provider): RedirectResponse
     {
         $this->validateProvider($provider);
+
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
 
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
-            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
             return redirect($frontendUrl . '/login?error=oauth_failed');
         }
 
-        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        $email = $socialUser->getEmail();
 
-        // Check if provider account already linked
+        // Un compte sans email ne peut pas être relié de façon sûre.
+        if (empty($email)) {
+            return redirect($frontendUrl . '/login?error=oauth_email_missing');
+        }
+
+        // On ne relie un compte que si le fournisseur garantit que
+        // l'adresse lui appartient bien.
+        if (!$this->providerEmailIsVerified($provider, $socialUser)) {
+            return redirect($frontendUrl . '/login?error=oauth_email_unverified');
+        }
+
+        $email = Str::lower($email);
+
+        // Compte fournisseur déjà relié → connexion directe.
         $providerAccount = UserProvider::where('provider', $provider)
             ->where('provider_id', $socialUser->getId())
             ->first();
 
-        if ($providerAccount) {
-            // Existing user — login
+        if ($providerAccount && $providerAccount->user) {
             $user = $providerAccount->user;
-            return $this->loginUser($user, $frontendUrl);
+
+            // Le fournisseur vient de prouver la propriété de l'adresse.
+            if (!$user->hasVerifiedEmail()) {
+                $user->markEmailAsVerified();
+            }
+
+            return $this->redirectWithCode($user, $frontendUrl);
         }
 
-        // Check if email already exists
-        $existingUser = User::where('email', $socialUser->getEmail())->first();
+        // Adresse déjà utilisée par un compte local → liaison.
+        $existingUser = User::where('email', $email)->first();
 
         if ($existingUser) {
-            // Link provider to existing account
-            UserProvider::create([
-                'user_id'      => $existingUser->id,
-                'provider'     => $provider,
-                'provider_id'  => $socialUser->getId(),
-                'access_token' => $socialUser->token,
-                'refresh_token' => $socialUser->refreshToken,
-                'expires_at'   => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
-            ]);
+            $this->linkProvider($existingUser, $provider, $socialUser);
 
-            return $this->loginUser($existingUser, $frontendUrl);
+            if (!$existingUser->hasVerifiedEmail()) {
+                $existingUser->markEmailAsVerified();
+            }
+
+            return $this->redirectWithCode($existingUser, $frontendUrl);
         }
 
-        // Create new user
-        $user = User::create([
-            'name'     => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
-            'email'    => $socialUser->getEmail(),
-            'password' => null, // No password for OAuth users
+        // Nouveau compte.
+        $user = DB::transaction(function () use ($provider, $socialUser, $email) {
+            $user = User::create([
+                'name'     => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
+                'email'    => $email,
+                'password' => null, // Pas de mot de passe pour un compte OAuth
+            ]);
+
+            $user->markEmailAsVerified();
+
+            $this->linkProvider($user, $provider, $socialUser);
+
+            // Préférences par défaut
+            $user->preferences()->create([]);
+
+            return $user;
+        });
+
+        return $this->redirectWithCode($user, $frontendUrl);
+    }
+
+    /**
+     * Échange un code à usage unique contre un token Sanctum.
+     * POST /api/auth/oauth/exchange
+     *
+     * Le token n'apparaît ainsi jamais dans l'URL, l'historique du
+     * navigateur ou les logs du serveur web.
+     */
+    public function exchange(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:128'],
         ]);
 
-        $user->markEmailAsVerified();
+        $userId = Cache::pull($this->exchangeCacheKey($validated['code']));
 
-        // Link provider
-        UserProvider::create([
-            'user_id'      => $user->id,
-            'provider'     => $provider,
-            'provider_id'  => $socialUser->getId(),
-            'access_token' => $socialUser->token,
-            'refresh_token' => $socialUser->refreshToken,
-            'expires_at'   => $socialUser->expiresIn ? now()->addSeconds($socialUser->expiresIn) : null,
+        if (!$userId) {
+            return response()->json(['message' => 'Code invalide ou expiré.'], 422);
+        }
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json(['message' => 'Code invalide ou expiré.'], 422);
+        }
+
+        $token = $user->createToken('auth_token', [], now()->addHours(24))->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type'   => 'Bearer',
+            'expires_in'   => 24 * 60,
+            'user'         => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+            ],
         ]);
-
-        // Auto-create preferences
-        $user->preferences()->create([]);
-
-        return $this->loginUser($user, $frontendUrl);
     }
 
     /**
@@ -161,17 +212,55 @@ class SocialiteAuthController extends Controller
         };
     }
 
-    private function loginUser(User $user, string $frontendUrl): JsonResponse|RedirectResponse
+    private function linkProvider(User $user, string $provider, $socialUser): void
     {
+        UserProvider::updateOrCreate(
+            [
+                'provider'    => $provider,
+                'provider_id' => $socialUser->getId(),
+            ],
+            [
+                'user_id'       => $user->id,
+                'access_token'  => $socialUser->token,
+                'refresh_token' => $socialUser->refreshToken,
+                'expires_at'    => $socialUser->expiresIn
+                    ? now()->addSeconds($socialUser->expiresIn)
+                    : null,
+            ]
+        );
+    }
+
+    private function redirectWithCode(User $user, string $frontendUrl): RedirectResponse
+    {
+        // Un seul token actif à la fois.
         $user->tokens()->delete();
 
-        $token = $user->createToken('auth_token', [], now()->addHours(24))->plainTextToken;
+        $code = Str::random(64);
 
-        // Redirect to frontend with token in URL fragment
-        return redirect($frontendUrl . '/auth/callback?token=' . $token . '&user=' . urlencode(json_encode([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-        ])));
+        Cache::put($this->exchangeCacheKey($code), $user->id, now()->addMinutes(2));
+
+        return redirect($frontendUrl . '/auth/callback?code=' . urlencode($code));
+    }
+
+    private function exchangeCacheKey(string $code): string
+    {
+        return 'oauth_exchange:' . hash('sha256', $code);
+    }
+
+    /**
+     * Vérifie que le fournisseur garantit la propriété de l'adresse email.
+     */
+    private function providerEmailIsVerified(string $provider, $socialUser): bool
+    {
+        $raw = $socialUser->getRaw();
+
+        return match ($provider) {
+            'google' => filter_var($raw['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            // Facebook ne renvoie pas de drapeau explicite : l'API ne
+            // communique l'email que pour un compte disposant d'une adresse
+            // valide. On s'appuie donc sur sa présence (vérifiée plus haut).
+            'facebook' => true,
+            default => false,
+        };
     }
 }

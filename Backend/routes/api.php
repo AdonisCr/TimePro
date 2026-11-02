@@ -28,8 +28,14 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // OAuth Social Login (Google/Facebook)
-Route::get('/auth/{provider}', [SocialiteAuthController::class, 'redirect']);
-Route::get('/auth/{provider}/callback', [SocialiteAuthController::class, 'callback']);
+// Le token n'est jamais transmis dans l'URL : la callback redirige avec un
+// code à usage unique, échangé ensuite contre un token.
+Route::get('/auth/{provider}', [SocialiteAuthController::class, 'redirect'])
+    ->middleware('throttle:10,1');
+Route::get('/auth/{provider}/callback', [SocialiteAuthController::class, 'callback'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/oauth/exchange', [SocialiteAuthController::class, 'exchange'])
+    ->middleware('throttle:10,1');
 
 // Max 10 tentatives d'inscription par minute par IP
 Route::post('/register', [AuthController::class, 'register'])
@@ -54,14 +60,16 @@ Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
     ->middleware(['signed'])
     ->name('verification.verify');
 
+// Renvoi de l'email de vérification : accessible SANS token, sinon un compte
+// non vérifié ne peut jamais sortir de la boucle. Limité par IP et par email.
+Route::post('/email/resend', [AuthController::class, 'resendVerification'])
+    ->middleware('throttle:3,1')
+    ->name('verification.send');
+
 // ── Routes protégées ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', [AuthController::class, 'me']);
-
-    Route::post('/email/resend', [AuthController::class, 'resendVerification'])
-        ->middleware('throttle:3,1')
-        ->name('verification.send');
 
     Route::post('/logout', [AuthController::class, 'logout']);
     

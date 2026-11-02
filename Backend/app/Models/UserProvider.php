@@ -27,7 +27,9 @@ class UserProvider extends Model
     protected function casts(): array
     {
         return [
-            'expires_at' => 'datetime',
+            'expires_at'    => 'datetime',
+            'access_token'  => 'encrypted',
+            'refresh_token' => 'encrypted',
         ];
     }
 

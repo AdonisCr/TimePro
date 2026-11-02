@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->statefulApi();
+
+        // API pure : en cas de visiteur non authentifié, ne jamais tenter de
+        // rediriger vers une route "login" qui n'existe pas (sinon erreur 500).
+        // La réponse 401 JSON est gérée dans withExceptions().
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $e, Request $request) {

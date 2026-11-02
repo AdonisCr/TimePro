@@ -16,10 +16,23 @@ const LoginPage = () => {
   const rawRedirect     = searchParams.get("redirect") || "";
   const redirectTo      = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/dashboard";
 
+  const oauthError = searchParams.get("error");
+  const oauthErrorMessage =
+    oauthError === "oauth_email_missing"
+      ? "Le fournisseur n'a pas transmis d'adresse email. Utilisez un autre mode de connexion."
+      : oauthError === "oauth_email_unverified"
+      ? "L'adresse email de ce compte externe n'est pas vérifiée. Impossible de le relier pour des raisons de sécurité."
+      : oauthError === "oauth_failed"
+      ? "La connexion avec le fournisseur a échoué. Veuillez réessayer."
+      : null;
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
-  const [error, setError]               = useState<string | null>(null);
+  const [error, setError]               = useState<string | null>(oauthErrorMessage);
   const [formData, setFormData]         = useState({ email: "", password: "" });
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending]   = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,6 +42,8 @@ const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setUnverifiedEmail(null);
+    setResendMessage(null);
 
     try {
       const response = await api.post("/login", {
@@ -40,14 +55,36 @@ const LoginPage = () => {
       login(response.data.access_token, response.data.user);
       navigate(redirectTo);
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 401 || status === 403) {
-        setError("Identifiants incorrects ou compte non vérifié. Veuillez réessayer.");
+      const response = (err as { response?: { status?: number; data?: { email_not_verified?: boolean } } })?.response;
+      const status = response?.status;
+
+      if (status === 403 && response?.data?.email_not_verified) {
+        setUnverifiedEmail(formData.email);
+      } else if (status === 401) {
+        setError("Email ou mot de passe incorrect.");
+      } else if (status === 429) {
+        setError("Trop de tentatives. Patientez une minute avant de réessayer.");
       } else {
         setError("Une erreur est survenue. Veuillez réessayer.");
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setIsResending(true);
+    setResendMessage(null);
+    try {
+      await api.post("/email/resend", { email: unverifiedEmail });
+      setResendMessage(
+        "Si un compte non vérifié existe pour cette adresse, un email vient d'être envoyé. Pensez à regarder vos spams."
+      );
+    } catch {
+      setResendMessage("Impossible d'envoyer l'email pour le moment. Réessayez plus tard.");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -111,6 +148,28 @@ const LoginPage = () => {
             <div className="mb-6 flex items-start gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
               <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
               <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {unverifiedEmail && (
+            <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <Mail className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">Votre adresse email n'est pas encore vérifiée.</p>
+                  <p className="mt-1">Cliquez sur le lien reçu à l'adresse <strong>{unverifiedEmail}</strong> (vérifiez les spams).</p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={isResending}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
+                  >
+                    {isResending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                    Renvoyer l'email de vérification
+                  </button>
+                  {resendMessage && <p className="mt-2 text-xs text-amber-700">{resendMessage}</p>}
+                </div>
+              </div>
             </div>
           )}
 

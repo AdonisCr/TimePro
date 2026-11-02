@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -29,10 +29,21 @@ const EmailVerificationCard = ({
   email: string;
   onClose: () => void;
 }) => {
-  useEffect(() => {
-    const t = setTimeout(onClose, 8000);
-    return () => clearTimeout(t);
-  }, [onClose]);
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setResendMessage(null);
+    try {
+      await api.post("/email/resend", { email });
+      setResendMessage("Email renvoyé. Pensez à vérifier vos spams.");
+    } catch {
+      setResendMessage("Impossible de renvoyer l'email pour le moment.");
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#16213e]/60 backdrop-blur-sm px-4">
@@ -57,16 +68,23 @@ const EmailVerificationCard = ({
           revenez vous connecter.
         </p>
 
-        {/* Progress bar auto-close */}
-        <div className="h-1 w-full rounded-full bg-gray-100 overflow-hidden mb-5">
-          <div
-            className="h-1 rounded-full bg-[#00B4DB]"
-            style={{ animation: "shrink 8s linear forwards" }}
-          />
-        </div>
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={isResending}
+          className="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00B4DB]/30 bg-[#e6f4fb] py-3 text-sm font-semibold text-[#007a94] transition hover:bg-[#d5eefa] disabled:opacity-60"
+        >
+          {isResending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          Renvoyer l'email de vérification
+        </button>
+
+        {resendMessage && (
+          <p className="mb-4 text-xs text-[#7a91a6]">{resendMessage}</p>
+        )}
 
         <Link
           to="/login"
+          onClick={onClose}
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00B4DB] py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,180,219,0.28)] transition hover:bg-[#0097bc]"
         >
           Aller à la connexion
@@ -77,10 +95,6 @@ const EmailVerificationCard = ({
           @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(24px); }
             to   { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes shrink {
-            from { width: 100%; }
-            to   { width: 0%; }
           }
         `}</style>
       </div>

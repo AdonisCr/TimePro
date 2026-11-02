@@ -24,6 +24,8 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
     name: user?.name || '',
     email: user?.email || '',
   });
+  // Demandé uniquement si l'adresse email change.
+  const [emailPassword, setEmailPassword] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(user?.profile_photo_url || null);
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -170,13 +172,35 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
     setLoading(true);
     setSuccess('');
     setError('');
+
+    const emailChanged = profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase();
+
+    if (emailChanged && !emailPassword) {
+      setError('Saisissez votre mot de passe actuel pour changer d\'adresse email.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await api.put('/user', profileData);
-      setSuccess('Profil mis à jour');
+      const payload: Record<string, string> = {
+        name: profileData.name,
+        email: profileData.email,
+      };
+
+      if (emailChanged) {
+        payload.current_password = emailPassword;
+      }
+
+      const res = await api.put('/user', payload);
+      setSuccess(res.data?.message || 'Profil mis à jour');
+      setEmailPassword('');
       onProfileUpdate?.();
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Erreur lors de la mise à jour');
+      const e = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
+      const firstError = e.response?.data?.errors
+        ? Object.values(e.response.data.errors)[0]?.[0]
+        : undefined;
+      setError(firstError || e.response?.data?.message || 'Erreur lors de la mise à jour');
     } finally {
       setLoading(false);
     }
@@ -261,6 +285,25 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary" required />
               </div>
             </div>
+
+            {profileData.email.trim().toLowerCase() !== (user?.email || '').toLowerCase() && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <label className="block text-sm font-medium text-amber-900 mb-2">
+                  Mot de passe actuel (obligatoire pour changer d'email)
+                </label>
+                <input
+                  type="password"
+                  value={emailPassword}
+                  onChange={e => setEmailPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="w-full px-4 py-3 border border-amber-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  placeholder="••••••••"
+                />
+                <p className="mt-2 text-xs text-amber-800">
+                  Votre nouvelle adresse devra être vérifiée. Un message sera aussi envoyé à votre ancienne adresse.
+                </p>
+              </div>
+            )}
 
             <div className="border-t border-gray-100 pt-6">
               <h4 className="font-semibold text-text-dark mb-4">Apparence</h4>

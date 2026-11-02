@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\TeamInvitation;
 use App\Models\TeamMember;
 use App\Models\User;
+use App\Notifications\EmailAddressChanged;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -49,7 +53,13 @@ class AuthController extends Controller
         if (app()->environment('local')) {
             $user->markEmailAsVerified();
         } else {
-            $user->sendEmailVerificationNotification();
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                // Le compte existe : une panne SMTP ne doit pas faire échouer
+                // l'inscription. L'utilisateur pourra demander un nouveau lien.
+                report($e);
+            }
         }
 
         TeamInvitation::where('email', $user->email)
@@ -151,17 +161,41 @@ class AuthController extends Controller
     }
 
     // ─── Renvoi lien de vérification ────────────────────────────
+    //
+    // Route publique : un compte non vérifié n'a pas de token, il ne peut
+    // donc pas s'authentifier. On limite par email (3 demandes / 10 min) en
+    // plus du throttle par IP de la route, et on répond toujours de façon
+    // neutre pour ne pas révéler si l'adresse existe.
     public function resendVerification(Request $request)
     {
-        $user = $request->user();
+        $request->validate(['email' => ['required', 'email']]);
 
-        if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email déjà vérifié.'], 400);
+        $email = Str::lower($request->input('email'));
+        $limiterKey = 'resend-verification:' . sha1($email);
+
+        if (RateLimiter::tooManyAttempts($limiterKey, 3)) {
+            $seconds = RateLimiter::availableIn($limiterKey);
+
+            return response()->json([
+                'message' => 'Trop de demandes. Réessayez dans ' . ceil($seconds / 60) . ' minute(s).',
+            ], 429);
         }
 
-        $user->sendEmailVerificationNotification();
+        RateLimiter::hit($limiterKey, 600);
 
-        return response()->json(['message' => 'Email de vérification renvoyé.']);
+        $user = User::where('email', $email)->first();
+
+        if ($user && !$user->hasVerifiedEmail()) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Si un compte non vérifié existe pour cette adresse, un email de vérification vient d\'être envoyé.',
+        ]);
     }
 
     // ─── Mot de passe oublié ────────────────────────────────────
@@ -222,18 +256,85 @@ class AuthController extends Controller
     }
 
     // ─── Mise à jour du profil ──────────────────────────────────
+    //
+    // Changer d'adresse email est une opération sensible : on exige le mot
+    // de passe actuel, on remet l'email comme "non vérifié" et on prévient
+    // l'ancienne adresse. Sans cela, un simple token volé suffirait à
+    // détourner définitivement le compte.
     public function updateProfile(Request $request)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'unique:users,email,' . $request->user()->id],
+            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
+            'current_password' => ['nullable', 'string'],
         ]);
 
-        $request->user()->update($validated);
+        $newEmail = Str::lower($validated['email']);
+        $emailChanged = $newEmail !== Str::lower($user->email);
+
+        if ($emailChanged) {
+            if (is_null($user->password)) {
+                throw ValidationException::withMessages([
+                    'email' => 'Définissez d\'abord un mot de passe avant de changer d\'adresse email.',
+                ]);
+            }
+
+            if (empty($validated['current_password'])) {
+                throw ValidationException::withMessages([
+                    'current_password' => 'Le mot de passe actuel est obligatoire pour changer d\'adresse email.',
+                ]);
+            }
+
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => 'Le mot de passe actuel est incorrect.',
+                ]);
+            }
+        }
+
+        unset($validated['current_password']);
+
+        $oldEmail = $user->email;
+
+        if ($emailChanged) {
+            // La nouvelle adresse doit être prouvée avant de servir à
+            // réinitialiser le mot de passe.
+            $validated['email'] = $newEmail;
+        }
+
+        $user->update($validated);
+
+        if ($emailChanged) {
+            // email_verified_at n'est pas "fillable" : on le modifie
+            // explicitement pour éviter qu'un update de masse ne le contourne.
+            $user->forceFill(['email_verified_at' => null])->save();
+
+            // Un changement d'email est sensible : on déconnecte les autres
+            // appareils, tout en gardant la session courante.
+            $this->revokeOtherTokens($user, $request);
+
+            try {
+                Notification::route('mail', $oldEmail)
+                    ->notify(new EmailAddressChanged($user->name, $oldEmail, $newEmail));
+
+                if (!app()->environment('local')) {
+                    $user->sendEmailVerificationNotification();
+                }
+            } catch (\Throwable $e) {
+                // L'email a bien été changé en base : une panne d'envoi ne
+                // doit pas transformer l'opération en erreur 500.
+                report($e);
+            }
+        }
 
         return response()->json([
-            'message' => 'Profil mis à jour',
-            'user' => $request->user()->fresh()->load('preferences'),
+            'message' => $emailChanged
+                ? 'Profil mis à jour. Un email de confirmation a été envoyé à votre ancienne adresse.'
+                : 'Profil mis à jour',
+            'email_changed' => $emailChanged,
+            'user' => $user->fresh()->load('preferences'),
         ]);
     }
 
@@ -297,6 +398,29 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ])->save();
 
+        // Les autres sessions ne doivent plus être valides après un
+        // changement de mot de passe.
+        $this->revokeOtherTokens($user, $request);
+
         return response()->json(['message' => 'Mot de passe mis à jour avec succès.']);
+    }
+
+    /**
+     * Supprime les tokens de l'utilisateur sauf celui de la requête courante.
+     */
+    private function revokeOtherTokens(User $user, Request $request): void
+    {
+        $current = $request->user()?->currentAccessToken();
+        $currentId = $current instanceof \Laravel\Sanctum\PersonalAccessToken
+            ? $current->id
+            : null;
+
+        $query = $user->tokens();
+
+        if ($currentId !== null) {
+            $query->where('id', '!=', $currentId);
+        }
+
+        $query->delete();
     }
 }

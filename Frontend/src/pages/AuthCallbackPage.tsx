@@ -1,34 +1,46 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../lib/axios';
 import { Loader2 } from 'lucide-react';
 
 const AuthCallbackPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const userStr = searchParams.get('user');
-    const error = searchParams.get('error');
+    // Évite un double appel en React StrictMode : le code est à usage unique.
+    if (hasRun.current) return;
+    hasRun.current = true;
 
-    if (error) {
-      navigate('/login?error=oauth_failed');
-      return;
-    }
+    const run = async () => {
+      const code = searchParams.get('code');
+      const error = searchParams.get('error');
 
-    if (token && userStr) {
+      if (error) {
+        navigate('/login?error=oauth_failed');
+        return;
+      }
+
+      if (!code) {
+        navigate('/login');
+        return;
+      }
+
       try {
-        const user = JSON.parse(decodeURIComponent(userStr));
-        login(token, user);
+        // Échange le code à usage unique contre un token : le token ne
+        // transite jamais par l'URL.
+        const response = await api.post('/auth/oauth/exchange', { code });
+        login(response.data.access_token, response.data.user);
         navigate('/dashboard');
       } catch {
         navigate('/login?error=oauth_failed');
       }
-    } else {
-      navigate('/login');
-    }
+    };
+
+    run();
   }, [searchParams, login, navigate]);
 
   return (

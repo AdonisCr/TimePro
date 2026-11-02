@@ -52,6 +52,27 @@ SANCTUM_STATEFUL_DOMAINS=localhost:5173
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
+## 🗄️ Base de données locale (sans sudo)
+
+Si aucun serveur MySQL n'est disponible sur la machine, le script
+`scripts/dev-db.sh` démarre une instance MySQL dédiée, stockée dans
+`Backend/.mysql-data/` (ignoré par Git).
+
+```bash
+./scripts/dev-db.sh start   # démarre MySQL sur 127.0.0.1:3307
+./scripts/dev-db.sh status  # vérifie que ça répond
+./scripts/dev-db.sh stop    # arrête proprement
+./scripts/dev-db.sh shell   # ouvre le client mysql
+```
+
+Le fichier `.env` doit alors contenir `DB_PORT=3307`, `DB_USERNAME=root`
+et `DB_PASSWORD=` (vide). Le script crée automatiquement la base
+`time_tracking` ; il reste à lancer `php artisan migrate`.
+
+> Note : le script copie le binaire `mysqld` dans `/tmp`, car AppArmor
+> (sécurité Ubuntu) interdit au binaire système d'écrire dans le projet.
+> C'est un contournement réservé au développement local.
+
 ## 🚀 Commandes Utiles
 
 ```bash
@@ -117,8 +138,12 @@ routes/
 ## 🧪 Tests
 
 ```bash
-php artisan test
+./scripts/test.sh
 ```
+
+Le script utilise `php artisan test` et charge automatiquement l'extension
+`pdo_sqlite` depuis `Backend/.php-ext/` si elle n'est pas installée sur la
+machine (les tests utilisent SQLite en mémoire, jamais la base de dev).
 
 ## 📦 Déploiement
 

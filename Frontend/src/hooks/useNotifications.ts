@@ -14,13 +14,19 @@ export interface Notification {
   };
 }
 
+interface NotificationTask {
+  status: string;
+  due_date?: string | null;
+}
+
 interface UseNotificationsOptions {
   enableReminders?: boolean;
   enableInsights?: boolean;
+  tasks?: NotificationTask[];
 }
 
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
-  const { enableReminders = true, enableInsights = true } = options;
+  const { enableReminders = true, enableInsights = true, tasks = [] } = options;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -113,7 +119,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         icon: '⚠️',
       });
     }
-  }, [addNotification, enableReminders, enableInsights]);
+  }, [addNotification, enableReminders, enableInsights, tasks]);
 
   return {
     notifications,

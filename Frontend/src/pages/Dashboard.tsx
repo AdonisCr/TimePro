@@ -33,28 +33,16 @@ import { useTimeEntries } from '../hooks/useTimeEntries';
 import { generateInsights } from '../lib/productivity';
 import { getTodayReport, type FocusMethod } from '../lib/focus';
 
-interface TaskItem {
-  id: number;
-  title: string;
-  description?: string | null;
-  priority: string;
-  status: string;
-  dueDate?: string | null;
-  dueTime?: string | null;
-  assignee?: string;
-  project?: string;
-}
+const normalizePriority = (value: string): ApiTask['priority'] =>
+  value === 'low' || value === 'high' ? value : 'medium';
 
-const toTaskItem = (task: ApiTask): TaskItem => ({
-  id: task.id,
-  title: task.title,
-  description: task.description,
-  priority: task.priority,
-  status: task.status,
-  dueDate: task.due_date,
-  assignee: undefined,
-  project: task.project?.name,
-});
+const normalizeStatus = (value?: string): ApiTask['status'] =>
+  value === 'in_progress' || value === 'done' ? value : 'todo';
+
+const normalizeRecurrence = (value: string): ApiTask['recurrence'] =>
+  value === 'daily' || value === 'weekly' || value === 'monthly' || value === 'yearly'
+    ? value
+    : 'none';
 
 const PAGE_ROUTES: Record<string, string> = {
   calendar: '/calendar',
@@ -69,7 +57,7 @@ function Dashboard() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [selectedTask, setSelectedTask] = useState<ApiTask | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
 
   useEffect(() => {
@@ -114,10 +102,10 @@ function Dashboard() {
         title: taskData.title,
         description: taskData.description,
         project_id: taskData.project_id || null,
-        priority: taskData.priority || 'medium',
-        status: taskData.status || 'todo',
+        priority: normalizePriority(taskData.priority),
+        status: normalizeStatus(taskData.status),
         due_date: taskData.due_date || null,
-        recurrence: taskData.recurrence || 'none',
+        recurrence: normalizeRecurrence(taskData.recurrence),
         recurrence_end_date: taskData.recurrence_end_date || null,
         parent_id: taskData.parent_id || null,
         depends_on: taskData.depends_on || null,
@@ -128,8 +116,8 @@ function Dashboard() {
     }
   };
 
-  const handleViewTask = (task: TaskItem) => {
-    setSelectedTask(task as unknown as TaskItem);
+  const handleViewTask = (task: { id: number }) => {
+    setSelectedTask(tasks.find(item => item.id === task.id) ?? null);
     setIsTaskDetailOpen(true);
   };
 
@@ -269,7 +257,7 @@ function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 {viewMode === 'kanban' ? (
-                  <KanbanBoard tasks={tasks as unknown as ApiTask[]} onTaskClick={handleViewTask as unknown as (task: ApiTask) => void} />
+                  <KanbanBoard tasks={tasks} onTaskClick={handleViewTask} />
                 ) : (
                   <Analytics tasks={apiTasks} />
                 )}
@@ -360,7 +348,7 @@ function Dashboard() {
       />
 
       <TaskDetailModal
-        task={selectedTask ? toTaskItem(selectedTask) : null}
+        task={selectedTask}
         isOpen={isTaskDetailOpen}
         onClose={() => setIsTaskDetailOpen(false)}
         onUpdate={handleUpdateTask}

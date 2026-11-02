@@ -58,7 +58,10 @@ export const usePreferences = (): UsePreferencesReturn => {
       const response = await api.get('/preferences');
       setPreferences(response.data);
     } catch (err: unknown) {
-      const message = err && typeof err === 'object' && 'response' in err && (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
       setError(message || 'Erreur lors du chargement des preferences');
     } finally {
       setLoading(false);

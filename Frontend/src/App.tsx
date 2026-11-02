@@ -48,12 +48,12 @@ const toWeeklyTask = (t: ApiTask): { id: number; title: string; project?: string
   estimated_duration: t.estimated_duration ?? undefined,
 });
 
-const toWeeklyEntry = (e: ApiTimeEntry): { id: number; description?: string; start_time: string; end_time?: string; duration?: number; project_id?: number; task_id?: number } => ({
+const toWeeklyEntry = (e: ApiTimeEntry): { id: number; description?: string; start_time: string; end_time?: string; duration: number; project_id?: number; task_id?: number } => ({
   id: e.id,
-  description: e.description,
+  description: e.description ?? undefined,
   start_time: e.start_time,
-  end_time: e.end_time,
-  duration: e.duration ?? undefined,
+  end_time: e.end_time ?? undefined,
+  duration: e.duration ?? 0,
   project_id: e.project_id ?? undefined,
   task_id: e.task_id ?? undefined,
 });

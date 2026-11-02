@@ -15,6 +15,10 @@ interface Task {
   due_date: string | null;
   is_completed: boolean;
   order: number;
+  depends_on: number | null;
+  recurrence: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurrence_end_date: string | null;
+  recurrence_count: number | null;
   project?: { id: number; name: string; color: string };
   subtasks?: Task[];
   created_at: string;
@@ -27,7 +31,7 @@ interface UseTasksReturn {
   error: string | null;
   isOffline: boolean;
   fetchTasks: () => Promise<void>;
-  createTask: (data: Partial<Task>) => Promise<Task>;
+  createTask: (data: Omit<Partial<Task>, 'subtasks'> & { subtasks?: { title: string }[] }) => Promise<Task>;
   updateTask: (id: number, data: Partial<Task>) => Promise<Task>;
   deleteTask: (id: number) => Promise<void>;
   getSubtasks: (parentId: number) => Task[];
@@ -73,7 +77,7 @@ export const useTasks = (): UseTasksReturn => {
     }
   }, []);
 
-  const createTask = async (data: Partial<Task>): Promise<Task> => {
+  const createTask = async (data: Omit<Partial<Task>, 'subtasks'> & { subtasks?: { title: string }[] }): Promise<Task> => {
     const { subtasks, ...taskData } = data as Task & { subtasks?: { title: string }[] };
     
     if (navigator.onLine) {

@@ -40,7 +40,7 @@ export const usePomodoro = (options: UsePomodoroOptions = {}) => {
     totalTime: config.workDuration!,
   });
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {

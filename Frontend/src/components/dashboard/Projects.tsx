@@ -16,7 +16,7 @@ interface ProjectData {
 
 interface Task {
   id: string | number;
-  name: string;
+  status?: string;
 }
 
 interface ProjectsProps {

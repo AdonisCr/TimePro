@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { offlineStorage } from '../lib/offlineStorage';
 
 interface UseOfflineReturn {

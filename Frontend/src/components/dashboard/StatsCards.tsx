@@ -20,8 +20,8 @@ interface ProjectItem {
 interface TimeEntryItem {
   id: number;
   start_time: string;
-  duration?: number;
-  task_id?: number;
+  duration?: number | null;
+  task_id?: number | null;
 }
 
 interface StatsCardsProps {

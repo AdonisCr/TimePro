@@ -22,3 +22,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Base MySQL locale de developpement (script scripts/dev-db.sh)
+.mysql-data/
+
+# Extensions PHP locales pour les tests (non versionnees)
+.php-ext/

@@ -3,11 +3,11 @@ import { METHODS, type FocusMethod } from './focus';
 export interface Task {
   id: number;
   title: string;
-  description?: string;
+  description?: string | null;
   priority: string;
   status: string;
-  due_date?: string;
-  estimated_duration?: number;
+  due_date?: string | null;
+  estimated_duration?: number | null;
   project?: {
     name: string;
     color: string;
@@ -49,7 +49,7 @@ export const getEatThatFrogTask = (tasks: Task[]): Task | null => {
 export const getTwoMinuteTasks = (tasks: Task[]): Task[] => {
   return tasks.filter(t => 
     t.status !== 'done' && 
-    t.estimated_duration !== undefined &&
+    typeof t.estimated_duration === 'number' &&
     t.estimated_duration <= 2
   );
 };
@@ -202,7 +202,7 @@ export const generateInsights = (
  * Get estimated time for a task in minutes
  */
 export const getEstimatedMinutes = (task: Task): number => {
-  if (task.estimated_duration) {
+  if (typeof task.estimated_duration === 'number' && task.estimated_duration > 0) {
     return task.estimated_duration;
   }
   

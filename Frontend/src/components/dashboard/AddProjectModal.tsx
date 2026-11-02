@@ -4,7 +4,10 @@ import { X, Folder } from 'lucide-react';
 interface Project {
   id: number;
   name: string;
+  description?: string;
   color: string;
+  deadline?: string | null;
+  time_budget?: number | null;
 }
 
 interface AddProjectModalProps {

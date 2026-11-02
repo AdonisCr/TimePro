@@ -6,15 +6,15 @@ interface Task {
   title: string;
   status: string;
   priority: string;
-  due_date?: string;
-  estimated_duration?: number;
-  updated_at?: string;
+  due_date?: string | null;
+  estimated_duration?: number | null;
+  updated_at?: string | null;
 }
 
 interface TimeEntry {
   id: number;
-  task_id?: number;
-  duration: number;
+  task_id?: number | null;
+  duration: number | null;
   start_time: string;
 }
 
@@ -45,7 +45,7 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
     const weekEntries = timeEntries.filter(e => 
       new Date(e.start_time) >= weekAgo
     );
-    const totalTimeMinutes = weekEntries.reduce((acc, e) => acc + e.duration, 0);
+    const totalTimeMinutes = weekEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0);
 
     // Average time per task
     const avgTimePerTask = completedThisWeek.length > 0 
@@ -74,7 +74,7 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
       
       const dayTime = weekEntries
         .filter(e => e.start_time.startsWith(dateStr))
-        .reduce((acc, e) => acc + e.duration, 0);
+        .reduce((acc, e) => acc + (e.duration ?? 0), 0);
       
       return {
         day: date.toLocaleDateString('fr-FR', { weekday: 'short' }),

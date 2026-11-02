@@ -120,7 +120,7 @@ const DEFAULT_HABITS: Habit[] = [
 export const useHabits = (): UseHabitsReturn => {
   const [habits, setHabits] = useState<Habit[]>(DEFAULT_HABITS);
 
-  const addHabit = useCallback((newHabit) => {
+  const addHabit = useCallback((newHabit: Omit<Habit, 'id' | 'currentStreak' | 'bestStreak' | 'completions'>) => {
     const habit: Habit = {
       ...newHabit,
       id: generateId(),

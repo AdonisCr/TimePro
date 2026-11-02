@@ -20,7 +20,7 @@ const Tracking: React.FC<TrackingProps> = () => {
   const [description, setDescription] = useState('');
   
   const startTimeRef = useRef<Date | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (isTracking && startTimeRef.current) {

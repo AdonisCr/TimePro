@@ -10,8 +10,10 @@ interface PushNotificationState {
 interface UsePushNotificationsReturn extends PushNotificationState {
   subscribe: () => Promise<boolean>;
   unsubscribe: () => Promise<boolean>;
-  sendNotification: (title: string, options?: NotificationOptions) => void;
+  sendNotification: (title: string, options?: NotificationWithVibrate) => void;
 }
+
+type NotificationWithVibrate = NotificationOptions & { vibrate?: number[] };
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
@@ -113,7 +115,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
     }
   };
 
-  const sendNotification = (title: string, options?: NotificationOptions) => {
+  const sendNotification = (title: string, options?: NotificationWithVibrate) => {
     if (state.permission === 'granted') {
       new Notification(title, {
         icon: '/icon-192x192.png',

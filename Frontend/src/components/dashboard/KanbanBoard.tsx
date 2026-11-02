@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ComponentProps } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GripVertical, Plus, MoreHorizontal, Target } from 'lucide-react';
@@ -13,7 +13,7 @@ interface Task {
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in_progress' | 'done';
   due_date: string | null;
-  estimated_duration?: number;
+  estimated_duration?: number | null;
   project?: { id: number; name: string; color: string };
   created_at: string;
 }
@@ -146,8 +146,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks }) => {
                         {(provided, snapshot) => (
                           <motion.div
                             ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
+                            {...(provided.draggableProps as unknown as ComponentProps<typeof motion.div>)}
+                            {...(provided.dragHandleProps as unknown as ComponentProps<typeof motion.div>)}
                             layout
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}

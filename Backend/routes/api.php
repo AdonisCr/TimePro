@@ -67,7 +67,9 @@ Route::post('/email/resend', [AuthController::class, 'resendVerification'])
     ->name('verification.send');
 
 // ── Routes protégées ─────────────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+// `idempotent` s'applique uniquement aux requêtes qui portent l'en-tête
+// X-Idempotency-Key ; les autres passent sans changement.
+Route::middleware(['auth:sanctum', 'idempotent'])->group(function () {
 
     Route::get('/user', [AuthController::class, 'me']);
 

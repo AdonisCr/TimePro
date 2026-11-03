@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Pro — hors ligne</title>
+    <meta name="theme-color" content="#00B4DB" />
+    <style>
+      :root {
+        color-scheme: light;
+        --brand: #00b4db;
+        --ink: #0f172a;
+        --soft: #64748b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: linear-gradient(160deg, #eef9fd 0%, #ffffff 60%);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      main {
+        width: min(460px, 100%);
+        padding: 32px;
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        text-align: center;
+      }
+
+      .logo {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 20px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 180, 219, 0.12);
+        color: var(--brand);
+        font-size: 26px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0 0 12px;
+        line-height: 1.6;
+        color: var(--soft);
+        font-size: 15px;
+      }
+
+      button {
+        margin-top: 16px;
+        padding: 12px 22px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--brand);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:focus-visible {
+        outline: 3px solid rgba(0, 180, 219, 0.4);
+        outline-offset: 3px;
+      }
+
+      .hint {
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--soft);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo" aria-hidden="true">⏱</div>
+      <h1>Pas de connexion</h1>
+      <p>
+        Time Pro n'a pas encore mis cette page en cache et le réseau est
+        indisponible.
+      </p>
+      <p>
+        Tes données déjà enregistrées restent sur cet appareil. Dès que la
+        connexion revient, elles seront synchronisées automatiquement.
+      </p>
+      <button type="button" onclick="window.location.reload()">Réessayer</button>
+      <p class="hint">Astuce : ouvre d'abord l'application une fois en ligne.</p>
+    </main>
+  </body>
+</html>

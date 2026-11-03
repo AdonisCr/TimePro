@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import api from "../lib/axios";
 import { ACTIVE_TIMER_STORAGE_KEY } from "../lib/timer";
+import { offlineStorage } from "../lib/offlineStorage";
+import { clearAuthProfile, isNetworkFailure, readAuthProfile, saveAuthProfile } from "../lib/authProfile";
 
 // ─── Types ───────────────────────────────────────────────────
 interface User {
@@ -37,12 +39,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const response = await api.get("/user");
+        // Chaque compte a son propre cache et sa propre file hors ligne.
+        offlineStorage.setUserScope(response.data.id);
+        saveAuthProfile(response.data);
         setUser(response.data);
         setToken(storedToken);
-      } catch {
-        // Token invalide ou expiré → on nettoie
+      } catch (error) {
+        // Réseau coupé : le jeton reste valide, on rouvre avec le profil
+        // mémorisé pour que le mode hors ligne fonctionne après rechargement.
+        if (isNetworkFailure(error)) {
+          const profile = readAuthProfile();
+          if (profile) {
+            offlineStorage.setUserScope(profile.id);
+            setUser(profile);
+            setToken(storedToken);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Token réellement invalide (401) ou profil absent → on nettoie.
         localStorage.removeItem("token");
         localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
+        clearAuthProfile();
+        offlineStorage.clearUserSession();
         setToken(null);
         setUser(null);
       } finally {
@@ -55,11 +75,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (newToken: string, userData: User) => {
     localStorage.setItem("token", newToken);
+    offlineStorage.setUserScope(userData.id);
+    saveAuthProfile(userData);
     setToken(newToken);
     setUser(userData);
   };
 
   const logout = async () => {
+    // Dernière chance d'envoyer les actions en attente avec le bon compte.
+    if (navigator.onLine) {
+      try {
+        await offlineStorage.syncPendingActions();
+      } catch {
+        // Les actions restent stockées sous la clé de cet utilisateur.
+      }
+    }
+
     try {
       await api.post("/logout");
     } catch {
@@ -68,6 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem("token");
       // Le chronomètre en cours appartient à l'utilisateur qui se déconnecte.
       localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
+      clearAuthProfile();
+      offlineStorage.clearUserSession();
       setToken(null);
       setUser(null);
     }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, Menu, Check, Trash2, X, Wifi, WifiOff, BellRing } from 'lucide-react';
+import { Search, Bell, Menu, Check, Trash2, X, Wifi, WifiOff, BellRing, AlertTriangle } from 'lucide-react';
 import useOffline from '../../hooks/useOffline';
 import usePushNotifications from '../../hooks/usePushNotifications';
 
@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({
   onClearNotification,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const { isOnline, pendingActionsCount } = useOffline();
+  const { isOnline, pendingActionsCount, failedActionsCount, failures, clearFailures } = useOffline();
   const { isSupported, isSubscribed, subscribe, unsubscribe } = usePushNotifications();
   
   const currentDate = new Date().toLocaleDateString('fr-FR', {
@@ -93,10 +93,29 @@ const Header: React.FC<HeaderProps> = ({
           }`}>
             {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
             <span className="hidden sm:inline">{isOnline ? 'En ligne' : 'Hors ligne'}</span>
-            {!isOnline && pendingActionsCount > 0 && (
+            {pendingActionsCount > 0 && (
               <span className="bg-amber-200 text-amber-800 px-1 rounded">{pendingActionsCount}</span>
             )}
           </div>
+
+          {/* Échecs définitifs de synchronisation */}
+          {failedActionsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const details = failures.map((failure) => `• ${failure.message}`).join('\n');
+                if (window.confirm(`Ces actions n'ont pas pu être synchronisées :\n\n${details}\n\nEffacer ces messages ?`)) {
+                  clearFailures();
+                }
+              }}
+              title="Actions hors ligne non synchronisées"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              <span className="hidden sm:inline">Échec sync</span>
+              <span className="bg-red-200 text-red-800 px-1 rounded">{failedActionsCount}</span>
+            </button>
+          )}
 
           {/* Push Notifications Toggle */}
           {isSupported && (

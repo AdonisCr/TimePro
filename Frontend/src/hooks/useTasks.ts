@@ -91,10 +91,11 @@ export const useTasks = (): UseTasksReturn => {
       await fetchTasks();
       return parentTask;
     } else {
-      // Offline: create locally
+      // Offline: create locally with a temporary negative id.
+      const localId = offlineStorage.nextLocalId();
       const newTask: Task = {
         ...taskData,
-        id: Date.now(),
+        id: localId,
         parent_id: taskData.parent_id || null,
         is_completed: taskData.is_completed || false,
         order: taskData.order || 0,
@@ -110,6 +111,7 @@ export const useTasks = (): UseTasksReturn => {
       offlineStorage.addPendingAction({
         type: 'create',
         endpoint: '/tasks',
+        localId,
         data: { ...taskData, ...(subtasks && subtasks.length > 0 ? { subtasks } : {}) },
       });
       
@@ -118,12 +120,14 @@ export const useTasks = (): UseTasksReturn => {
   };
 
   const updateTask = async (id: number, data: Partial<Task>): Promise<Task> => {
-    if (navigator.onLine) {
+    // Un id négatif n'existe pas encore côté serveur : on ne peut pas le modifier
+    // par un appel direct, même si le navigateur se croit en ligne.
+    if (navigator.onLine && id > 0) {
       const response = await api.put(`/tasks/${id}`, data);
       setTasks(prev => prev.map(t => t.id === id ? response.data : t));
       return response.data;
     } else {
-      // Offline: update locally
+      // Offline (ou élément local) : mise à jour locale puis file d'attente.
       const updatedTask = tasks.find(t => t.id === id);
       if (!updatedTask) throw new Error('Task not found');
       
@@ -137,7 +141,7 @@ export const useTasks = (): UseTasksReturn => {
         type: 'update',
         endpoint: '/tasks',
         resourceId: id,
-        data: { id, ...data },
+        data: { ...data },
       });
       
       return merged;
@@ -145,11 +149,11 @@ export const useTasks = (): UseTasksReturn => {
   };
 
   const deleteTask = async (id: number): Promise<void> => {
-    if (navigator.onLine) {
+    if (navigator.onLine && id > 0) {
       await api.delete(`/tasks/${id}`);
       setTasks(prev => prev.filter(t => t.id !== id));
     } else {
-      // Offline: delete locally
+      // Offline (ou élément local) : suppression locale puis file d'attente.
       setTasks(prev => prev.filter(t => t.id !== id));
       offlineStorage.setCache('tasks', tasks.filter(t => t.id !== id));
       
@@ -178,9 +182,16 @@ export const useTasks = (): UseTasksReturn => {
     
     fetchTasks();
     
+    // Après une synchronisation, les identifiants locaux sont remplacés par
+    // ceux du serveur : on recharge la liste pour rester cohérent.
+    const unsubscribeSync = offlineStorage.subscribeToSync(() => {
+      void fetchTasks();
+    });
+    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribeSync();
     };
   }, [fetchTasks]);
 

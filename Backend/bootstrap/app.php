@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -27,6 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->statefulApi();
+
+        // `idempotent` : rejoue la réponse d'une requête d'écriture déjà reçue
+        // (en-tête X-Idempotency-Key) au lieu de créer un doublon.
+        $middleware->alias([
+            'idempotent' => EnsureIdempotency::class,
+        ]);
 
         // API pure : en cas de visiteur non authentifié, ne jamais tenter de
         // rediriger vers une route "login" qui n'existe pas (sinon erreur 500).

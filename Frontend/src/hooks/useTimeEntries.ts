@@ -113,9 +113,11 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
       fetchStats();
       return response.data;
     } else {
+      // Offline : identifiant local négatif + file d'attente idempotente.
+      const localId = offlineStorage.nextLocalId();
       const newEntry: TimeEntry = {
         ...data,
-        id: Date.now(),
+        id: localId,
         duration: data.duration ?? null,
         is_manual: data.is_manual || false,
       } as TimeEntry;
@@ -126,6 +128,7 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
       offlineStorage.addPendingAction({
         type: 'create',
         endpoint: '/time-entries',
+        localId,
         data,
       });
       
@@ -134,12 +137,13 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
   };
 
   const updateEntry = async (id: number, data: Partial<TimeEntry>): Promise<TimeEntry> => {
-    if (navigator.onLine) {
+    if (navigator.onLine && id > 0) {
       const response = await api.put(`/time-entries/${id}`, data);
       setEntries(prev => prev.map(e => e.id === id ? response.data : e));
       fetchStats();
       return response.data;
     } else {
+      // Offline (ou entrée locale non encore synchronisée).
       const updated = entries.find(e => e.id === id);
       if (!updated) throw new Error('Entry not found');
       
@@ -151,7 +155,7 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
         type: 'update',
         endpoint: '/time-entries',
         resourceId: id,
-        data: { id, ...data },
+        data: { ...data },
       });
       
       return merged;
@@ -159,7 +163,7 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
   };
 
   const deleteEntry = async (id: number): Promise<void> => {
-    if (navigator.onLine) {
+    if (navigator.onLine && id > 0) {
       await api.delete(`/time-entries/${id}`);
       setEntries(prev => prev.filter(e => e.id !== id));
       fetchStats();
@@ -184,10 +188,18 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
     
     fetchEntries();
     fetchStats();
+
+    // Les identifiants locaux sont remplacés après synchronisation : on
+    // recharge les entrées et les statistiques pour éviter les fantômes.
+    const unsubscribeSync = offlineStorage.subscribeToSync(() => {
+      void fetchEntries();
+      void fetchStats();
+    });
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribeSync();
     };
   }, [fetchEntries, fetchStats]);
 

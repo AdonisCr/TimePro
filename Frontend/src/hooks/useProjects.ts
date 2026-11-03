@@ -74,9 +74,11 @@ export const useProjects = (): UseProjectsReturn => {
       setProjects(prev => [response.data, ...prev]);
       return response.data;
     } else {
+      // Offline : identifiant local négatif, jamais en collision avec MySQL.
+      const localId = offlineStorage.nextLocalId();
       const newProject: Project = {
         ...data,
-        id: Date.now(),
+        id: localId,
         spent_seconds: 0,
         budget_usage_percent: 0,
         budget_status: 'none',
@@ -90,6 +92,7 @@ export const useProjects = (): UseProjectsReturn => {
       offlineStorage.addPendingAction({
         type: 'create',
         endpoint: '/projects',
+        localId,
         data,
       });
       
@@ -98,11 +101,12 @@ export const useProjects = (): UseProjectsReturn => {
   };
 
   const updateProject = async (id: number, data: Partial<Project>): Promise<Project> => {
-    if (navigator.onLine) {
+    if (navigator.onLine && id > 0) {
       const response = await api.put(`/projects/${id}`, data);
       setProjects(prev => prev.map(p => p.id === id ? response.data : p));
       return response.data;
     } else {
+      // Offline (ou projet local non encore synchronisé).
       const updated = projects.find(p => p.id === id);
       if (!updated) throw new Error('Project not found');
       
@@ -114,7 +118,7 @@ export const useProjects = (): UseProjectsReturn => {
         type: 'update',
         endpoint: '/projects',
         resourceId: id,
-        data: { id, ...data },
+        data: { ...data },
       });
       
       return merged;
@@ -122,7 +126,7 @@ export const useProjects = (): UseProjectsReturn => {
   };
 
   const deleteProject = async (id: number): Promise<void> => {
-    if (navigator.onLine) {
+    if (navigator.onLine && id > 0) {
       await api.delete(`/projects/${id}`);
       setProjects(prev => prev.filter(p => p.id !== id));
     } else {
@@ -145,10 +149,15 @@ export const useProjects = (): UseProjectsReturn => {
     window.addEventListener('offline', handleOffline);
     
     fetchProjects();
+
+    const unsubscribeSync = offlineStorage.subscribeToSync(() => {
+      void fetchProjects();
+    });
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribeSync();
     };
   }, [fetchProjects]);
 

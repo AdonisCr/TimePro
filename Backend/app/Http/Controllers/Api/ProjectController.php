@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
@@ -72,7 +73,14 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
-        $project->delete();
+        // Supprimer un projet ne doit jamais effacer l'historique de temps :
+        // les tâches et les entrées sont détachées (project_id = null).
+        DB::transaction(function () use ($project) {
+            $project->tasks()->update(['project_id' => null]);
+            $project->timeEntries()->update(['project_id' => null]);
+            $project->delete();
+        });
+
         return response()->json(['message' => 'Projet supprimé']);
     }
 }

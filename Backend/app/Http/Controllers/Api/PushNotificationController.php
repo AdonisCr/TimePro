@@ -30,9 +30,10 @@ class PushNotificationController extends Controller
         PushSubscription::updateOrCreate(
             [
                 'user_id' => $request->user()->id,
-                'endpoint' => $validated['endpoint'],
+                'endpoint_hash' => hash('sha256', $validated['endpoint']),
             ],
             [
+                'endpoint' => $validated['endpoint'],
                 'keys' => $validated['keys'],
                 'user_agent' => substr((string) $request->userAgent(), 0, 255),
             ]

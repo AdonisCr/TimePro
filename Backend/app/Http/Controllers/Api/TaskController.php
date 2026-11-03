@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
@@ -60,8 +61,16 @@ class TaskController extends Controller
 
         if (isset($validated['parent_id'])) {
             $parent = Task::find($validated['parent_id']);
-            if ($parent->user_id !== $request->user()->id) {
+            if (!$parent || $parent->user_id !== $request->user()->id) {
                 return response()->json(['message' => 'Tâche parente non autorisée'], 403);
+            }
+        }
+
+        // Une dépendance ne peut viser qu'une tâche du même utilisateur.
+        if (isset($validated['depends_on'])) {
+            $dependsOn = Task::find($validated['depends_on']);
+            if (!$dependsOn || $dependsOn->user_id !== $request->user()->id) {
+                return response()->json(['message' => 'Tâche dépendante non autorisée'], 403);
             }
         }
 
@@ -130,6 +139,9 @@ class TaskController extends Controller
             if ($validated['parent_id'] === $task->id) {
                 return response()->json(['message' => 'Une tâche ne peut pas être sa propre parente'], 400);
             }
+            if ($this->parentChainContains($task, (int) $validated['parent_id'])) {
+                return response()->json(['message' => 'Cette parenté créerait une boucle'], 400);
+            }
         }
 
         if (isset($validated['depends_on'])) {
@@ -139,6 +151,9 @@ class TaskController extends Controller
             }
             if ($validated['depends_on'] === $task->id) {
                 return response()->json(['message' => 'Une tâche ne peut pas dépendre d\'elle-même'], 400);
+            }
+            if ($this->dependencyChainContains($task, (int) $validated['depends_on'])) {
+                return response()->json(['message' => 'Cette dépendance créerait une boucle'], 400);
             }
         }
 
@@ -178,8 +193,62 @@ class TaskController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
-        $task->delete();
+        // Supprimer une tâche ne doit jamais effacer l'historique de temps.
+        // On détache aussi les sous-tâches et les dépendances.
+        DB::transaction(function () use ($task) {
+            $task->timeEntries()->update(['task_id' => null]);
+            $task->subtasks()->update(['parent_id' => null]);
+            Task::where('depends_on', $task->id)->update(['depends_on' => null]);
+            $task->delete();
+        });
+
         return response()->json(['message' => 'Tâche supprimée']);
+    }
+
+    /**
+     * Vrai si la chaîne de dépendances de $dependsOnId repasse par $task.
+     */
+    private function dependencyChainContains(Task $task, int $dependsOnId): bool
+    {
+        $visited = [];
+        $currentId = $dependsOnId;
+
+        while ($currentId !== null && !isset($visited[$currentId])) {
+            if ((int) $currentId === (int) $task->id) {
+                return true;
+            }
+
+            $visited[$currentId] = true;
+            $next = Task::where('id', $currentId)
+                ->where('user_id', $task->user_id)
+                ->value('depends_on');
+            $currentId = $next === null ? null : (int) $next;
+        }
+
+        return false;
+    }
+
+    /**
+     * Vrai si la chaîne de parents de $parentId repasse par $task.
+     */
+    private function parentChainContains(Task $task, int $parentId): bool
+    {
+        $visited = [];
+        $currentId = $parentId;
+
+        while ($currentId !== null && !isset($visited[$currentId])) {
+            if ((int) $currentId === (int) $task->id) {
+                return true;
+            }
+
+            $visited[$currentId] = true;
+            $next = Task::where('id', $currentId)
+                ->where('user_id', $task->user_id)
+                ->value('parent_id');
+            $currentId = $next === null ? null : (int) $next;
+        }
+
+        return false;
     }
 
     public function reorder(Request $request): JsonResponse

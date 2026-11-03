@@ -1,41 +1,73 @@
-import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, Clock, Calendar, BarChart3, Timer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Pause, Square, Clock, Calendar, BarChart3, Timer, RotateCcw } from 'lucide-react';
 import { useTimeEntries } from '../../hooks/useTimeEntries';
 import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
+import {
+  ACTIVE_TIMER_STORAGE_KEY,
+  createIdleTimer,
+  getElapsedSeconds,
+  getFirstStart,
+  getStatus,
+  parseTimerState,
+  pauseTimer,
+  resumeTimer,
+  serializeTimer,
+  startTimer,
+  type TimerState,
+} from '../../lib/timer';
 
 interface TrackingProps {
   tasks?: unknown[];
 }
 
+const readStoredTimer = (): TimerState => {
+  try {
+    return parseTimerState(localStorage.getItem(ACTIVE_TIMER_STORAGE_KEY)) ?? createIdleTimer();
+  } catch {
+    return createIdleTimer();
+  }
+};
+
 const Tracking: React.FC<TrackingProps> = () => {
   const { entries, stats, createEntry, loading } = useTimeEntries();
   const { projects } = useProjects();
   const { tasks } = useTasks();
-  
-  const [isTracking, setIsTracking] = useState(false);
-  const [seconds, setSeconds] = useState(0);
+
+  const [timer, setTimer] = useState<TimerState>(readStoredTimer);
+  const [seconds, setSeconds] = useState(() => getElapsedSeconds(timer, Date.now()));
   const [selectedProject, setSelectedProject] = useState<number | ''>('');
   const [selectedTask, setSelectedTask] = useState<number | ''>('');
   const [description, setDescription] = useState('');
-  
-  const startTimeRef = useRef<Date | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const status = getStatus(timer);
+
+  // Le chronomètre survit à un rechargement de la page : le temps déjà
+  // travaillé n'est pas perdu.
+  useEffect(() => {
+    try {
+      if (status === 'idle') {
+        localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
+      } else {
+        localStorage.setItem(ACTIVE_TIMER_STORAGE_KEY, serializeTimer(timer));
+      }
+    } catch {
+      // Stockage indisponible (navigation privée) : le chrono reste en mémoire.
+    }
+
+    setSeconds(getElapsedSeconds(timer, Date.now()));
+  }, [timer, status]);
 
   useEffect(() => {
-    if (isTracking && startTimeRef.current) {
-      intervalRef.current = setInterval(() => {
-        setSeconds(Math.floor((Date.now() - startTimeRef.current!.getTime()) / 1000));
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isTracking]);
+    if (status !== 'running') return;
+
+    const interval = setInterval(() => {
+      setSeconds(getElapsedSeconds(timer, Date.now()));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [status, timer]);
 
   const formatTime = (secs: number) => {
     const h = Math.floor(secs / 3600);
@@ -51,40 +83,62 @@ const Tracking: React.FC<TrackingProps> = () => {
     return `${h}h ${m}m`;
   };
 
-  const handleStart = () => {
-    startTimeRef.current = new Date();
+  const resetTimer = () => {
+    setTimer(createIdleTimer());
     setSeconds(0);
-    setIsTracking(true);
+    setDescription('');
+  };
+
+  const handleStart = () => {
+    setErrorMessage(null);
+    setSeconds(0);
+    setTimer(startTimer(Date.now()));
   };
 
   const handlePause = () => {
-    setIsTracking(false);
+    setTimer((current) => pauseTimer(current, Date.now()));
+  };
+
+  const handleResume = () => {
+    setErrorMessage(null);
+    setTimer((current) => resumeTimer(current, Date.now()));
   };
 
   const handleStop = async () => {
-    if (!startTimeRef.current) return;
-    
+    const firstStart = getFirstStart(timer);
+    if (firstStart === null) return;
+
     const endTime = new Date();
-    const duration = Math.floor((endTime.getTime() - startTimeRef.current.getTime()) / 1000);
-    
+    // Somme des segments actifs : les pauses ne sont pas comptées.
+    const duration = getElapsedSeconds(timer, endTime.getTime());
+
+    if (duration < 1) {
+      resetTimer();
+      return;
+    }
+
     try {
       await createEntry({
         task_id: selectedTask || null,
         project_id: selectedProject || null,
         description: description || null,
-        start_time: startTimeRef.current.toISOString(),
+        start_time: new Date(firstStart).toISOString(),
         end_time: endTime.toISOString(),
-        duration: duration,
+        duration,
         is_manual: false,
       });
     } catch (err) {
       console.error('Erreur création entry:', err);
+      // On ne réinitialise pas : la session reste visible et peut être
+      // réessayée, plutôt que d'être perdue silencieusement.
+      setErrorMessage(
+        "La session n'a pas pu être enregistrée. Vérifie la connexion puis réessaie."
+      );
+      return;
     }
-    
-    setIsTracking(false);
-    setSeconds(0);
-    startTimeRef.current = null;
-    setDescription('');
+
+    setErrorMessage(null);
+    resetTimer();
   };
 
   const filteredTasks = selectedProject 
@@ -109,11 +163,17 @@ const Tracking: React.FC<TrackingProps> = () => {
             <div className="text-6xl font-mono font-bold text-text-dark mb-4">
               {formatTime(seconds)}
             </div>
-            <p className="text-text-soft">{isTracking ? 'Session en cours' : 'Prêt à démarrer'}</p>
+            <p className="text-text-soft">
+              {status === 'running'
+                ? 'Session en cours'
+                : status === 'paused'
+                  ? 'En pause — le temps n’est plus compté'
+                  : 'Prêt à démarrer'}
+            </p>
           </div>
 
           <div className="flex justify-center space-x-4 mb-6">
-            {!isTracking ? (
+            {status === 'idle' && (
               <button
                 onClick={handleStart}
                 className="flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all bg-primary hover:bg-primary-hover text-white"
@@ -121,7 +181,9 @@ const Tracking: React.FC<TrackingProps> = () => {
                 <Play className="w-5 h-5" />
                 <span>Démarrer</span>
               </button>
-            ) : (
+            )}
+
+            {status === 'running' && (
               <button
                 onClick={handlePause}
                 className="flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all bg-yellow-500 hover:bg-yellow-600 text-white"
@@ -130,15 +192,32 @@ const Tracking: React.FC<TrackingProps> = () => {
                 <span>Pause</span>
               </button>
             )}
+
+            {status === 'paused' && (
+              <button
+                onClick={handleResume}
+                className="flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all bg-primary hover:bg-primary-hover text-white"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Reprendre</span>
+              </button>
+            )}
+
             <button 
               onClick={handleStop}
-              disabled={!startTimeRef.current}
+              disabled={status === 'idle'}
               className="flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Square className="w-5 h-5" />
               <span>Arrêter</span>
             </button>
           </div>
+
+          {errorMessage && (
+            <p className="max-w-md mx-auto mb-4 text-sm text-red-600" role="alert">
+              {errorMessage}
+            </p>
+          )}
 
           <div className="max-w-md mx-auto space-y-4">
             <select

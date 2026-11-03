@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import api from "../lib/axios";
+import { ACTIVE_TIMER_STORAGE_KEY } from "../lib/timer";
 
 // ─── Types ───────────────────────────────────────────────────
 interface User {
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch {
         // Token invalide ou expiré → on nettoie
         localStorage.removeItem("token");
+        localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
         setToken(null);
         setUser(null);
       } finally {
@@ -64,6 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Silencieux si le token est déjà invalide
     } finally {
       localStorage.removeItem("token");
+      // Le chronomètre en cours appartient à l'utilisateur qui se déconnecte.
+      localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
       setToken(null);
       setUser(null);
     }

@@ -23,6 +23,7 @@ interface Task {
   subtasks?: Task[];
   created_at: string;
   updated_at: string;
+  completed_at: string | null;
 }
 
 interface UseTasksReturn {
@@ -100,6 +101,7 @@ export const useTasks = (): UseTasksReturn => {
         subtasks: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        completed_at: taskData.is_completed ? new Date().toISOString() : null,
       } as Task;
       
       setTasks(prev => [newTask, ...prev]);
@@ -126,6 +128,8 @@ export const useTasks = (): UseTasksReturn => {
       if (!updatedTask) throw new Error('Task not found');
       
       const merged = { ...updatedTask, ...data, updated_at: new Date().toISOString() };
+      const nowDone = merged.status === 'done' || merged.is_completed === true;
+      merged.completed_at = nowDone ? (updatedTask.completed_at ?? new Date().toISOString()) : null;
       setTasks(prev => prev.map(t => t.id === id ? merged : t));
       offlineStorage.setCache('tasks', tasks.map(t => t.id === id ? merged : t));
       

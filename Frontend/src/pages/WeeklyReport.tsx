@@ -1,104 +1,19 @@
 import { useMemo } from 'react';
 import { BarChart3, Clock, CheckCircle, Target, TrendingUp, TrendingDown } from 'lucide-react';
-
-interface Task {
-  id: number;
-  title: string;
-  status: string;
-  priority: string;
-  due_date?: string | null;
-  estimated_duration?: number | null;
-  updated_at?: string | null;
-}
-
-interface TimeEntry {
-  id: number;
-  task_id?: number | null;
-  duration: number | null;
-  start_time: string;
-}
+import {
+  buildWeeklyReport,
+  formatSecondsAsHours,
+  type WeeklyTask,
+  type WeeklyTimeEntry,
+} from '../lib/weeklyReport';
 
 interface WeeklyReportProps {
-  tasks: Task[];
-  timeEntries: TimeEntry[];
+  tasks: WeeklyTask[];
+  timeEntries: WeeklyTimeEntry[];
 }
 
 const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
-  const report = useMemo(() => {
-    const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 7);
-
-    // Tasks completed this week
-    const completedThisWeek = tasks.filter(t => 
-      t.status === 'done' && 
-      t.updated_at && 
-      new Date(t.updated_at) >= weekAgo
-    );
-
-    // Tasks created this week
-    const createdThisWeek = tasks.filter(t => 
-      new Date(t.due_date || t.id.toString()) >= weekAgo
-    );
-
-    // Time tracked this week
-    const weekEntries = timeEntries.filter(e => 
-      new Date(e.start_time) >= weekAgo
-    );
-    const totalTimeMinutes = weekEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0);
-
-    // Average time per task
-    const avgTimePerTask = completedThisWeek.length > 0 
-      ? totalTimeMinutes / completedThisWeek.length 
-      : 0;
-
-    // Completion rate
-    const completionRate = createdThisWeek.length > 0
-      ? Math.round((completedThisWeek.length / createdThisWeek.length) * 100)
-      : 0;
-
-    // Priority distribution
-    const highPriority = completedThisWeek.filter(t => t.priority === 'high').length;
-    const mediumPriority = completedThisWeek.filter(t => t.priority === 'medium').length;
-    const lowPriority = completedThisWeek.filter(t => t.priority === 'low').length;
-
-    // Daily breakdown (last 7 days)
-    const dailyBreakdown = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (6 - i));
-      const dateStr = date.toISOString().split('T')[0];
-      
-      const dayTasks = completedThisWeek.filter(t => 
-        t.updated_at?.startsWith(dateStr)
-      ).length;
-      
-      const dayTime = weekEntries
-        .filter(e => e.start_time.startsWith(dateStr))
-        .reduce((acc, e) => acc + (e.duration ?? 0), 0);
-      
-      return {
-        day: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
-        tasks: dayTasks,
-        time: dayTime,
-      };
-    });
-
-    return {
-      completedCount: completedThisWeek.length,
-      totalCount: createdThisWeek.length,
-      totalTimeMinutes,
-      avgTimePerTask,
-      completionRate,
-      priorityDistribution: { high: highPriority, medium: mediumPriority, low: lowPriority },
-      dailyBreakdown,
-    };
-  }, [tasks, timeEntries]);
-
-  const formatMinutes = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${h}h${m.toString().padStart(2, '0')}`;
-  };
+  const report = useMemo(() => buildWeeklyReport(tasks, timeEntries), [tasks, timeEntries]);
 
   return (
     <div className="space-y-6">
@@ -128,7 +43,7 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
               <Clock className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-text-dark">{formatMinutes(report.totalTimeMinutes)}</p>
+              <p className="text-2xl font-bold text-text-dark">{formatSecondsAsHours(report.totalTimeSeconds)}</p>
               <p className="text-xs text-text-soft">Temps total</p>
             </div>
           </div>
@@ -152,7 +67,7 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
               <BarChart3 className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-text-dark">{formatMinutes(report.avgTimePerTask)}</p>
+              <p className="text-2xl font-bold text-text-dark">{formatSecondsAsHours(report.avgTimePerTaskSeconds)}</p>
               <p className="text-xs text-text-soft">Moy./tâche</p>
             </div>
           </div>
@@ -163,16 +78,17 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h3 className="font-semibold text-text-dark mb-4">Activité par jour</h3>
         <div className="flex items-end justify-between h-40 gap-2">
-          {report.dailyBreakdown.map((day, index) => {
+          {report.dailyBreakdown.map((day) => {
             const maxTasks = Math.max(...report.dailyBreakdown.map(d => d.tasks), 1);
             const height = (day.tasks / maxTasks) * 100;
             
             return (
-              <div key={index} className="flex-1 flex flex-col items-center gap-2">
+              <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
                 <div className="w-full flex flex-col items-center justify-end h-32">
                   <div
                     className="w-full bg-primary rounded-t-lg transition-all hover:bg-primary/80"
                     style={{ height: `${Math.max(height, 4)}%` }}
+                    title={`${day.tasks} tâche(s) · ${formatSecondsAsHours(day.timeSeconds)}`}
                   />
                 </div>
                 <span className="text-xs text-text-soft">{day.day}</span>
@@ -238,10 +154,10 @@ const WeeklyReport = ({ tasks, timeEntries }: WeeklyReportProps) => {
               Tu as complété moins de la moitié de tes tâches. Veux-tu réorganiser ?
             </p>
           )}
-          {report.totalTimeMinutes > 2400 && (
+          {report.totalTimeSeconds > 40 * 3600 && (
             <p>⚠️ Tu as travaillé plus de 40h cette semaine. N'oublie pas de te reposer.</p>
           )}
-          {report.avgTimePerTask > 120 && (
+          {report.avgTimePerTaskSeconds > 2 * 3600 && (
             <p>💡 Tes tâches prennent en moyenne plus de 2h. Peut-être les diviser ?</p>
           )}
         </div>

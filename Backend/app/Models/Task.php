@@ -24,6 +24,7 @@ class Task extends Model
         'start_date',
         'estimated_duration',
         'is_completed',
+        'completed_at',
         'order',
         'recurrence',
         'recurrence_end_date',
@@ -38,9 +39,28 @@ class Task extends Model
             'start_date' => 'date',
             'estimated_duration' => 'integer',
             'is_completed' => 'boolean',
+            'completed_at' => 'datetime',
             'recurrence_end_date' => 'date',
             'recurrence_count' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // La date de complétion est tenue à jour quel que soit le chemin
+        // d'écriture (API, import, tâche récurrente...).
+        static::saving(function (Task $task) {
+            $isDone = $task->status === 'done' || $task->is_completed === true;
+
+            if (!$isDone) {
+                $task->completed_at = null;
+                return;
+            }
+
+            if ($task->completed_at === null) {
+                $task->completed_at = now();
+            }
+        });
     }
 
     public function user(): BelongsTo

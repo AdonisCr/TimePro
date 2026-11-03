@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FocusSession;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,10 +15,23 @@ class FocusController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $rules = [
             'task_id' => ['nullable', 'integer', 'exists:tasks,id'],
             'method' => ['required', 'in:' . implode(',', self::METHODS)],
-        ]);
+            // Champs optionnels : permettent d'envoyer une session terminée
+            // hors ligne (elle a commencé avant l'appel réseau).
+            'started_at' => ['nullable', 'date', 'before_or_equal:now', 'after_or_equal:' . now()->subDays(7)->toDateTimeString()],
+            'ended_at' => ['nullable', 'date'],
+            'duration_seconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
+            'completed' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ];
+
+        if ($request->filled('started_at')) {
+            $rules['ended_at'][] = 'after_or_equal:started_at';
+        }
+
+        $validated = $request->validate($rules);
 
         if (isset($validated['task_id'])) {
             $task = \App\Models\Task::find($validated['task_id']);
@@ -26,11 +40,28 @@ class FocusController extends Controller
             }
         }
 
+        $startedAt = isset($validated['started_at'])
+            ? Carbon::parse($validated['started_at'])
+            : now();
+
+        $endedAt = isset($validated['ended_at'])
+            ? Carbon::parse($validated['ended_at'])
+            : null;
+
+        $duration = $validated['duration_seconds'] ?? null;
+        if ($duration === null && $endedAt !== null) {
+            $duration = (int) abs($endedAt->diffInSeconds($startedAt));
+        }
+        $duration = max(0, (int) ($duration ?? 0));
+
         $session = $request->user()->focusSessions()->create([
             'task_id' => $validated['task_id'] ?? null,
             'method' => $validated['method'],
-            'started_at' => now(),
-            'completed' => false,
+            'started_at' => $startedAt,
+            'ended_at' => $endedAt,
+            'duration_seconds' => $duration,
+            'completed' => $validated['completed'] ?? ($endedAt !== null && $duration >= 60),
+            'notes' => $validated['notes'] ?? null,
         ]);
 
         return response()->json([
@@ -38,6 +69,9 @@ class FocusController extends Controller
             'task_id' => $session->task_id,
             'method' => $session->method,
             'started_at' => $session->started_at,
+            'ended_at' => $session->ended_at,
+            'duration_seconds' => $session->duration_seconds,
+            'completed' => $session->completed,
         ], 201);
     }
 
@@ -112,7 +146,7 @@ class FocusController extends Controller
 
         $tasksDone = $user->tasks()
             ->where('status', 'done')
-            ->whereDate('updated_at', $today)
+            ->whereDate('completed_at', $today)
             ->get(['id', 'title']);
 
         $tasksPendingToday = $user->tasks()

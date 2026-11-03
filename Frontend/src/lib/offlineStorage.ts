@@ -8,6 +8,10 @@ interface OfflineAction {
   type: 'create' | 'update' | 'delete';
   endpoint: string;
   resourceId?: number;
+  /** URL complète, si elle ne suit pas le schéma `endpoint/resourceId`. */
+  url?: string;
+  /** Verbe HTTP à utiliser (par défaut : post / put / delete). */
+  method?: 'post' | 'put' | 'patch' | 'delete';
   data?: Record<string, unknown>;
   timestamp: number;
   synced: boolean;
@@ -24,6 +28,7 @@ class OfflineStorage {
   private isOnline: boolean = navigator.onLine;
   private pendingActions: OfflineAction[] = [];
   private listeners: Set<() => void> = new Set();
+  private syncing = false;
   private readonly CACHE_VERSION = 1;
   private readonly CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -176,37 +181,49 @@ class OfflineStorage {
   }
 
   async syncPendingActions(): Promise<void> {
+    // Évite qu'un double déclenchement (événement "online" + montage d'un
+    // écran) envoie deux fois la même action.
+    if (this.syncing) return;
+
     const pending = this.getPendingActions();
     if (pending.length === 0) return;
 
-    for (const action of pending) {
-      try {
-        const axios = (await import('../lib/axios')).default;
-        
-        switch (action.type) {
-          case 'create':
-            await axios.post(action.endpoint, action.data);
-            break;
-          case 'update':
-            if (action.resourceId === undefined) {
-              this.removeAction(action.id);
+    this.syncing = true;
+
+    try {
+      for (const action of pending) {
+        try {
+          const axios = (await import('../lib/axios')).default;
+          const hasResourceId = action.resourceId !== undefined;
+          const path = action.url ?? (hasResourceId ? `${action.endpoint}/${action.resourceId}` : action.endpoint);
+
+          switch (action.type) {
+            case 'create':
+              await axios.request({ url: path, method: action.method ?? 'post', data: action.data });
               break;
-            }
-            await axios.put(`${action.endpoint}/${action.resourceId}`, action.data);
-            break;
-          case 'delete':
-            if (action.resourceId === undefined) {
-              this.removeAction(action.id);
+            case 'update':
+              if (!hasResourceId && !action.url) {
+                this.removeAction(action.id);
+                break;
+              }
+              await axios.request({ url: path, method: action.method ?? 'put', data: action.data });
               break;
-            }
-            await axios.delete(`${action.endpoint}/${action.resourceId}`);
-            break;
+            case 'delete':
+              if (!hasResourceId && !action.url) {
+                this.removeAction(action.id);
+                break;
+              }
+              await axios.request({ url: path, method: action.method ?? 'delete', data: action.data });
+              break;
+          }
+          
+          this.markActionSynced(action.id);
+        } catch (error) {
+          console.error(`Failed to sync action ${action.id}:`, error);
         }
-        
-        this.markActionSynced(action.id);
-      } catch (error) {
-        console.error(`Failed to sync action ${action.id}:`, error);
       }
+    } finally {
+      this.syncing = false;
     }
   }
 

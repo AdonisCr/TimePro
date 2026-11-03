@@ -8,11 +8,14 @@ import {
   getMethodConfig,
   getTodaySessions,
   isFocusMethod,
+  queueFocusSession,
+  queueFocusSessionStop,
   startFocusSession,
   stopFocusSession,
   type FocusMethod,
   type TodaySessionsResponse,
 } from '../../../lib/focus';
+import { offlineStorage } from '../../../lib/offlineStorage';
 import MethodSelector from './MethodSelector';
 import CycleTimer from './CycleTimer';
 import FreeTimer from './FreeTimer';
@@ -76,6 +79,16 @@ const FocusMode = () => {
     refreshToday();
   }, [refreshToday]);
 
+  // Les sessions terminées hors ligne sont envoyées dès que possible, puis
+  // le récapitulatif du jour est rafraîchi automatiquement.
+  useEffect(() => {
+    const unsubscribe = offlineStorage.subscribe(refreshToday);
+    if (navigator.onLine) {
+      offlineStorage.syncPendingActions().then(refreshToday).catch(() => undefined);
+    }
+    return unsubscribe;
+  }, [refreshToday]);
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -136,8 +149,10 @@ const FocusMode = () => {
       const session = await startFocusSession(taskId, method);
       setSessionId(session.id);
     } catch {
+      // Pas de réseau : la session démarre quand même et sera enregistrée
+      // localement à l'arrêt, puis synchronisée plus tard.
       setSessionId(null);
-      setWarning('Session locale — la synchronisation a échoué.');
+      setWarning('Session locale — elle sera synchronisée au retour du réseau.');
     }
     setPhase('active');
     setStarting(false);
@@ -147,25 +162,46 @@ const FocusMode = () => {
     if (stopping) return;
     setStopping(true);
     let duration: number | null = null;
+    const endedAt = new Date();
 
     if (sessionId !== null) {
       try {
         const stopped = await stopFocusSession(sessionId);
         duration = stopped.duration_seconds;
       } catch {
-        setWarning('Arrêt non synchronisé — durée estimée localement.');
+        // La session existe côté serveur : on met simplement son arrêt en
+        // file d'attente pour ne pas créer de doublon.
+        queueFocusSessionStop(sessionId);
+        setWarning('Arrêt enregistré localement — synchronisation au retour du réseau.');
       }
     }
 
     if (duration === null) {
       duration =
         localStartedAt !== null ? Math.round((Date.now() - localStartedAt) / 1000) : 0;
+
+      if (sessionId === null && localStartedAt !== null) {
+        queueFocusSession({
+          task_id: taskId,
+          method,
+          started_at: new Date(localStartedAt).toISOString(),
+          ended_at: endedAt.toISOString(),
+          duration_seconds: Math.max(0, duration),
+          completed: duration >= 60,
+        });
+        setWarning('Session enregistrée hors ligne — elle sera synchronisée automatiquement.');
+      }
     }
 
     setLastDuration(duration);
     setPhase('done');
     setStopping(false);
     refreshToday();
+
+    // Si la connexion est revenue entre-temps, on synchronise tout de suite.
+    if (navigator.onLine) {
+      offlineStorage.syncPendingActions().then(refreshToday).catch(() => undefined);
+    }
   };
 
   const handleNewSession = () => {

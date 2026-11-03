@@ -116,7 +116,7 @@ export const useTimeEntries = (): UseTimeEntriesReturn => {
       const newEntry: TimeEntry = {
         ...data,
         id: Date.now(),
-        duration: null,
+        duration: data.duration ?? null,
         is_manual: data.is_manual || false,
       } as TimeEntry;
       

@@ -38,7 +38,7 @@ const toProdTask = (t: ApiTask): ProdTask => ({
   project: t.project ? { name: t.project.name, color: t.project.color } : undefined,
 });
 
-const toWeeklyTask = (t: ApiTask): { id: number; title: string; project?: string; status: string; priority: string; due_date?: string; estimated_duration?: number } => ({
+const toWeeklyTask = (t: ApiTask): { id: number; title: string; project?: string; status: string; priority: string; due_date?: string; estimated_duration?: number; created_at: string | null; completed_at: string | null; updated_at: string | null } => ({
   id: t.id,
   title: t.title,
   project: t.project?.name,
@@ -46,6 +46,9 @@ const toWeeklyTask = (t: ApiTask): { id: number; title: string; project?: string
   priority: t.priority,
   due_date: t.due_date ?? undefined,
   estimated_duration: t.estimated_duration ?? undefined,
+  created_at: t.created_at ?? null,
+  completed_at: t.completed_at ?? null,
+  updated_at: t.updated_at ?? null,
 });
 
 const toWeeklyEntry = (e: ApiTimeEntry): { id: number; description?: string; start_time: string; end_time?: string; duration: number; project_id?: number; task_id?: number } => ({

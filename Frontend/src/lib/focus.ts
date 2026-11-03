@@ -1,4 +1,5 @@
 import { api } from './axios';
+import { offlineStorage } from './offlineStorage';
 
 export type FocusMethod =
   | 'pomodoro'
@@ -150,11 +151,123 @@ export const stopFocusSession = async (
 };
 
 export const getTodaySessions = async (): Promise<TodaySessionsResponse> => {
-  const response = await api.get<TodaySessionsResponse>('/focus/sessions/today');
-  return response.data;
+  const pending = getPendingFocusSessions().filter((session) => isToday(session.started_at));
+
+  try {
+    const response = await api.get<TodaySessionsResponse>('/focus/sessions/today');
+    offlineStorage.setCache(TODAY_CACHE_KEY, response.data);
+    return mergePendingSessions(response.data, pending);
+  } catch (error) {
+    const cached = offlineStorage.getCache<TodaySessionsResponse>(TODAY_CACHE_KEY);
+    if (cached) return mergePendingSessions(cached, pending);
+    if (pending.length > 0) {
+      return mergePendingSessions({ sessions: [], total_seconds: 0, by_method: {} }, pending);
+    }
+    throw error;
+  }
 };
 
 export const getTodayReport = async (): Promise<FocusReport> => {
-  const response = await api.get<FocusReport>('/focus/report/today');
-  return response.data;
+  try {
+    const response = await api.get<FocusReport>('/focus/report/today');
+    offlineStorage.setCache(REPORT_CACHE_KEY, response.data);
+    return response.data;
+  } catch (error) {
+    const cached = offlineStorage.getCache<FocusReport>(REPORT_CACHE_KEY);
+    if (cached) return cached;
+    throw error;
+  }
+};
+
+// ─── Sessions de focus hors ligne ───────────────────────────────
+// Une session démarrée sans réseau n'a pas d'identifiant serveur. Elle est
+// conservée localement puis envoyée automatiquement au retour de la connexion.
+
+const FOCUS_ENDPOINT = '/focus/sessions';
+const TODAY_CACHE_KEY = 'focusToday';
+const REPORT_CACHE_KEY = 'focusReport';
+
+export interface PendingFocusSession {
+  local_id: string;
+  task_id: number | null;
+  method: FocusMethod;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number;
+  completed: boolean;
+  notes?: string | null;
+}
+
+type FocusSessionPayload = Omit<PendingFocusSession, 'local_id'>;
+
+/** Enregistre une session terminée hors ligne (envoi différé). */
+export const queueFocusSession = (session: FocusSessionPayload): string =>
+  offlineStorage.addPendingAction({
+    type: 'create',
+    endpoint: FOCUS_ENDPOINT,
+    data: { ...session },
+  });
+
+/** Enregistre l'arrêt d'une session créée en ligne mais non arrêtée. */
+export const queueFocusSessionStop = (sessionId: number, notes?: string): string =>
+  offlineStorage.addPendingAction({
+    type: 'update',
+    endpoint: FOCUS_ENDPOINT,
+    resourceId: sessionId,
+    url: `${FOCUS_ENDPOINT}/${sessionId}/stop`,
+    method: 'patch',
+    data: notes ? { notes } : {},
+  });
+
+export const getPendingFocusSessions = (): PendingFocusSession[] =>
+  offlineStorage
+    .getPendingActions()
+    .filter((action) => action.endpoint === FOCUS_ENDPOINT && action.type === 'create' && action.data)
+    .map((action) => ({
+      ...(action.data as unknown as FocusSessionPayload),
+      local_id: action.id,
+    }));
+
+const isToday = (value: string): boolean => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
+};
+
+const mergePendingSessions = (
+  base: TodaySessionsResponse,
+  pending: PendingFocusSession[]
+): TodaySessionsResponse => {
+  if (pending.length === 0) return base;
+
+  const byMethod: Partial<Record<FocusMethod, number>> = { ...base.by_method };
+  let pendingSeconds = 0;
+
+  const sessions: FocusSession[] = pending.map((session, index) => {
+    pendingSeconds += Math.max(0, session.duration_seconds);
+    byMethod[session.method] = (byMethod[session.method] ?? 0) + Math.max(0, session.duration_seconds);
+
+    return {
+      id: -(index + 1),
+      task_id: session.task_id,
+      method: session.method,
+      started_at: session.started_at,
+      ended_at: session.ended_at,
+      duration_seconds: Math.max(0, session.duration_seconds),
+      completed: session.completed,
+      notes: session.notes ?? null,
+      task_title: null,
+    };
+  });
+
+  return {
+    sessions: [...sessions, ...base.sessions],
+    total_seconds: base.total_seconds + pendingSeconds,
+    by_method: byMethod,
+  };
 };

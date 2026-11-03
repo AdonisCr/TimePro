@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ACTIVE_TIMER_STORAGE_KEY } from './timer';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -23,6 +24,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
             localStorage.removeItem('token');
+            localStorage.removeItem(ACTIVE_TIMER_STORAGE_KEY);
             window.location.href = '/login';
         }
         return Promise.reject(error);

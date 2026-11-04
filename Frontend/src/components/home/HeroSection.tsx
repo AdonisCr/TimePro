@@ -66,8 +66,8 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Capture réelle de l'application */}
-          <div className="relative">
+          {/* Captures réelles de l'application : ordinateur + téléphone */}
+          <div className="relative lg:pl-6">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-2 shadow-2xl shadow-[#00B4DB]/10">
               <div className="flex items-center gap-1.5 px-2 py-2" aria-hidden="true">
                 <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
@@ -76,15 +76,32 @@ const HeroSection = () => {
               </div>
               <img
                 src="/product-preview.webp"
-                alt="Tableau de bord Time Pro : priorités du jour, nombre de tâches, projets et heures travaillées"
+                alt="Tableau de bord Time Pro sur ordinateur : priorités du jour, nombre de tâches, projets et heures travaillées"
                 className="w-full h-auto rounded-xl"
                 loading="eager"
                 width={1740}
                 height={1374}
               />
             </div>
+
+            {/* Téléphone en superposition, uniquement sur grand écran */}
+            <div className="hidden lg:block absolute -left-12 bottom-4 w-[152px]">
+              <div className="absolute -inset-6 bg-[#00B4DB]/15 blur-2xl rounded-full" aria-hidden="true" />
+              <div className="relative rounded-[2rem] border border-white/15 bg-[#0a0f1c] p-1.5 shadow-2xl shadow-black/60">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-16 h-1.5 rounded-full bg-white/15" aria-hidden="true" />
+                <img
+                  src="/product-preview-mobile.webp"
+                  alt="Tableau de bord Time Pro sur téléphone : priorités du jour et tâches en cours"
+                  className="w-full h-auto rounded-[1.6rem]"
+                  loading="eager"
+                  width={600}
+                  height={1300}
+                />
+              </div>
+            </div>
+
             <p className="text-center text-white/40 text-xs mt-3">
-              Capture réelle de l'application. Données de démonstration.
+              Captures réelles de l'application. Données de démonstration.
             </p>
           </div>
         </div>

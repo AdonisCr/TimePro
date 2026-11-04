@@ -14,6 +14,20 @@ export interface Task {
   };
 }
 
+/**
+ * Renvoie la date locale au format AAAA-MM-JJ.
+ * Une échéance fixée à aujourd'hui ne doit pas être considérée comme en retard :
+ * on compare donc des jours, pas des heures.
+ */
+const toLocalDateKey = (value: string | Date): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
 export interface ProductivityInsight {
   type: 'frog' | 'two_minute' | 'mit' | 'warning' | 'tip' | 'focus';
   icon: string;
@@ -27,12 +41,12 @@ export interface ProductivityInsight {
  * Eat That Frog: Identify the first high-priority task of the day
  */
 export const getEatThatFrogTask = (tasks: Task[]): Task | null => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateKey(new Date());
   
   const highPriorityTasks = tasks.filter(t => 
     t.priority === 'high' && 
     t.status !== 'done' &&
-    (!t.due_date || t.due_date <= today)
+    (!t.due_date || toLocalDateKey(t.due_date) <= today)
   );
   
   // Return the first one (or most overdue)
@@ -142,10 +156,11 @@ export const generateInsights = (
   }
   
   // Warnings
+  const todayKey = toLocalDateKey(new Date());
   const overdueTasks = tasks.filter(t => 
     t.status !== 'done' && 
     t.due_date && 
-    new Date(t.due_date) < new Date()
+    toLocalDateKey(t.due_date) < todayKey
   );
   
   if (overdueTasks.length > 0) {

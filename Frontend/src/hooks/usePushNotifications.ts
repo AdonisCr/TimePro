@@ -17,6 +17,13 @@ type NotificationWithVibrate = NotificationOptions & { vibrate?: number[] };
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
+/**
+ * Les notifications push ne sont proposées que si une clé VAPID publique est
+ * configurée. Sans elle, l'abonnement échoue (surtout sur Chrome) et le bouton
+ * donnerait une fausse impression de fonctionnalité.
+ */
+export const isPushConfigured = VAPID_PUBLIC_KEY !== '';
+
 export const usePushNotifications = (): UsePushNotificationsReturn => {
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,

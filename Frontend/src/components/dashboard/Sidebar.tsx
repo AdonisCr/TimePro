@@ -4,7 +4,6 @@ import {
   FolderOpen,
   Settings,
   Inbox,
-  Wrench,
   Plus,
   User,
   LogOut,
@@ -87,7 +86,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, onAddTas
     {
       label: 'Espace',
       items: [
-        { icon: Wrench, label: 'Outils', id: 'tools' },
         { icon: Inbox, label: 'Boîte de réception', id: 'inbox' },
         { icon: Share2, label: 'Partager le planning', id: 'share-planning' },
         { icon: Download, label: 'Exporter', id: 'export' },

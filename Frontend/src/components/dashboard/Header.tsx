@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Bell, Menu, Check, Trash2, X, Wifi, WifiOff, BellRing, AlertTriangle } from 'lucide-react';
 import useOffline from '../../hooks/useOffline';
-import usePushNotifications from '../../hooks/usePushNotifications';
+import usePushNotifications, { isPushConfigured } from '../../hooks/usePushNotifications';
 
 interface Notification {
   id: string;
@@ -117,8 +117,8 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Push Notifications Toggle */}
-          {isSupported && (
+          {/* Push Notifications Toggle : masqué tant que les clés VAPID ne sont pas configurées */}
+          {isSupported && isPushConfigured && (
             <button
               onClick={() => isSubscribed ? unsubscribe() : subscribe()}
               className={`p-2 rounded-lg transition-colors ${

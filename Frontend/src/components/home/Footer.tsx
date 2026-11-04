@@ -1,186 +1,114 @@
 import { Link } from 'react-router-dom';
-import { Clock, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
 
 const Footer = () => {
+  const scrollTo = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <footer className="bg-[#050810] text-white border-t border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Company Info */}
-          <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center space-x-3 mb-8">
+          {/* Identité */}
+          <div className="lg:col-span-2">
+            <Link to="/" className="flex items-center space-x-3 mb-6">
               <div className="p-3 bg-[#00B4DB] rounded-xl">
                 <Clock className="w-8 h-8 text-white" />
               </div>
               <span className="text-2xl font-bold">Time Pro</span>
             </Link>
-            
-            <p className="text-gray-300 mb-8 leading-relaxed text-lg">
-              Time Pro révolutionne la gestion du temps grâce à l'intelligence artificielle. 
-              Optimisez votre productivité avec notre solution innovante.
+
+            <p className="text-gray-300 mb-6 leading-relaxed text-lg max-w-md">
+              Écris tout ce que tu as à faire. Time Pro le range dans ta journée :
+              priorités, créneaux et temps travaillé.
             </p>
-            
-            <div className="flex space-x-4">
-              <a 
-                href="#" 
-                className="p-3 bg-gray-700 hover:bg-[#00B4DB] rounded-xl transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-6 h-6" />
-              </a>
-              <a 
-                href="#" 
-                className="p-3 bg-gray-700 hover:bg-[#00B4DB] rounded-xl transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-6 h-6" />
-              </a>
-              <a 
-                href="#" 
-                className="p-3 bg-gray-700 hover:bg-[#00B4DB] rounded-xl transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="w-6 h-6" />
-              </a>
-              <a 
-                href="#" 
-                className="p-3 bg-gray-700 hover:bg-[#00B4DB] rounded-xl transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-6 h-6" />
-              </a>
+
+            <div className="flex items-center gap-3 text-gray-400">
+              <MapPin className="w-5 h-5 text-[#00B4DB]" />
+              <span>Cotonou, Bénin</span>
             </div>
+
+            <p className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300">
+              <span className="w-2 h-2 rounded-full bg-[#00B4DB]" />
+              Bêta gratuite, sans carte bancaire
+            </p>
           </div>
 
-          {/* Quick Links */}
+          {/* Produit */}
           <div>
-            <h3 className="text-xl font-bold mb-8">Liens rapides</h3>
-            <ul className="space-y-4">
+            <h3 className="text-lg font-bold mb-6">Produit</h3>
+            <ul className="space-y-3">
               <li>
                 <button
-                  onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg"
+                  onClick={() => scrollTo('how-it-works')}
+                  className="text-gray-300 hover:text-[#00B4DB] transition-colors"
                 >
-                  À propos
+                  Comment ça marche
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg"
+                  onClick={() => scrollTo('features')}
+                  className="text-gray-300 hover:text-[#00B4DB] transition-colors"
                 >
                   Fonctionnalités
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg"
-                >
-                  Témoignages
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg"
+                  onClick={() => scrollTo('pricing')}
+                  className="text-gray-300 hover:text-[#00B4DB] transition-colors"
                 >
                   Tarifs
                 </button>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  Blog
-                </a>
+                <button
+                  onClick={() => scrollTo('faq')}
+                  className="text-gray-300 hover:text-[#00B4DB] transition-colors"
+                >
+                  FAQ
+                </button>
               </li>
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Compte */}
           <div>
-            <h3 className="text-xl font-bold mb-8">Légal</h3>
-            <ul className="space-y-4">
+            <h3 className="text-lg font-bold mb-6">Compte</h3>
+            <ul className="space-y-3">
               <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  Politique de confidentialité
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  Conditions d'utilisation
-                </a>
+                <Link to="/signup" className="text-gray-300 hover:text-[#00B4DB] transition-colors">
+                  Créer un compte
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  Mentions légales
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  Cookies
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                  RGPD
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="text-xl font-bold mb-8">Contact</h3>
-            <ul className="space-y-6">
-              <li className="flex items-start space-x-4">
-                <Mail className="w-6 h-6 text-[#00B4DB] mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-sm text-gray-400 mb-1">Email</div>
-                  <a href="mailto:contact@timepro.fr" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                    contact@timepro.fr
-                  </a>
-                </div>
-              </li>
-              <li className="flex items-start space-x-4">
-                <Phone className="w-6 h-6 text-[#00B4DB] mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-sm text-gray-400 mb-1">Téléphone</div>
-                  <a href="tel:+33123456789" className="text-gray-300 hover:text-[#00B4DB] transition-colors text-lg">
-                    +229 01 64 02 85 46
-                    </a>
-                </div>
-              </li>
-              <li className="flex items-start space-x-4">
-                <MapPin className="w-6 h-6 text-[#00B4DB] mt-1 flex-shrink-0" />
-                <div>
-                  <div className="text-sm text-gray-400 mb-1">Adresse</div>
-                  <div className="text-gray-300 text-lg">
-                    Cotonou / Benin <br />
-                    123 Rue de l'Innovation                    
-                  </div>
-                </div>
+                <Link to="/login" className="text-gray-300 hover:text-[#00B4DB] transition-colors">
+                  Se connecter
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-700 mt-16 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-gray-400 text-lg">
-              © {new Date().getFullYear()} Time Pro. Tous droits réservés.
+        {/* Bas de page */}
+        <div className="border-t border-gray-800 mt-12 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-gray-400 text-sm">
+              © {new Date().getFullYear()} Time Pro — Cotonou, Bénin
             </div>
-            
-            <div className="flex items-center space-x-8 text-lg text-gray-400">
-              <span>🇫🇷 Français</span>
+
+            <div className="flex items-center gap-6 text-sm text-gray-400">
+              <span>Français</span>
               <Link to="/login" className="hover:text-[#00B4DB] transition-colors">
                 Se connecter
               </Link>
-              <Link 
-                to="/signup" 
-                className="bg-[#00B4DB] hover:bg-[#087c95] text-white px-6 py-3 rounded-xl transition-all font-semibold"
+              <Link
+                to="/signup"
+                className="bg-[#00B4DB] hover:bg-[#087c95] text-white px-5 py-2.5 rounded-xl transition-all font-semibold"
               >
-                Essai gratuit
+                Essayer gratuitement
               </Link>
             </div>
           </div>

@@ -1,80 +1,87 @@
 import { useState } from 'react';
-import { Plus, Minus, HelpCircle } from 'lucide-react';
+import { Plus, Minus, HelpCircle, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const faqs = [
+  {
+    question: 'Comment l’app planifie ma journée ?',
+    answer:
+      'Tu écris tes tâches en vrac. L’app estime une durée et une priorité à partir de mots simples (« réunion », « urgent », « rapport »…), puis propose un ordre et des créneaux. Tu peux tout corriger à la main avant de valider.',
+  },
+  {
+    question: 'Ça marche sur téléphone ?',
+    answer:
+      'Oui, dans le navigateur du téléphone comme sur ordinateur. Sur mobile, tu peux aussi l’ajouter à ton écran d’accueil pour l’ouvrir comme une application.',
+  },
+  {
+    question: 'Et si je n’ai pas de connexion ?',
+    answer:
+      'Le planning et le chronomètre continuent de fonctionner hors ligne. Les actions sont mises en attente, puis envoyées automatiquement quand le réseau revient.',
+  },
+  {
+    question: 'Mes données m’appartiennent-elles ?',
+    answer:
+      'Tu peux exporter tes tâches, ton temps et tes projets en JSON, CSV ou Markdown, quand tu veux. Tes données ne sont pas revendues.',
+  },
+  {
+    question: 'Combien coûte Time Pro ?',
+    answer:
+      'Rien pendant la bêta. Aucune carte bancaire n’est demandée. Si une offre payante arrive, tu seras prévenu avant toute facturation et tu resteras libre de refuser.',
+  },
+  {
+    question: 'Je peux partager mon planning ?',
+    answer:
+      'Oui. Un lien public peut afficher ton planning du jour, et si tu le souhaites tes statistiques et tes projets. Tu actives ou désactives chaque partie dans les réglages, et la coupure est immédiate.',
+  },
+  {
+    question: 'Est-ce fait pour les équipes ?',
+    answer:
+      'Tu peux créer une équipe, inviter des personnes par email et leur donner un rôle. Les fonctions d’équipe restent simples pendant la bêta.',
+  },
+  {
+    question: 'Y a-t-il des intégrations (Google Calendar, Slack…) ?',
+    answer:
+      'Pas encore. Time Pro ne se connecte aujourd’hui à aucun calendrier ni outil externe. On préfère le dire plutôt que de le promettre.',
+  },
+];
 
 const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
-
-  const faqs = [
-    {
-      question: 'Comment l\'IA de Time Pro optimise-t-elle mon planning ?',
-      answer: 'Notre intelligence artificielle analyse vos habitudes de travail, vos pics de productivité, et vos préférences pour créer un planning personnalisé. Elle apprend continuellement de vos actions pour améliorer ses recommandations et maximiser votre efficacité.'
-    },
-    {
-      question: 'Time Pro est-il compatible avec mes outils existants ?',
-      answer: 'Absolument ! Time Pro s\'intègre avec plus de 50 applications populaires comme Google Calendar, Slack, Trello, Asana, Microsoft Office, et bien d\'autres. L\'installation se fait en quelques clics via notre centre d\'intégrations.'
-    },
-    {
-      question: 'Mes données personnelles sont-elles sécurisées ?',
-      answer: 'La sécurité est notre priorité absolue. Toutes vos données sont chiffrées avec un standard de niveau bancaire (AES-256), stockées sur des serveurs certifiés SOC 2, et nous ne vendons jamais vos informations personnelles à des tiers.'
-    },
-    {
-      question: 'Puis-je utiliser Time Pro en équipe ?',
-      answer: 'Oui ! Time Pro propose des fonctionnalités collaboratives avancées : partage de calendriers, assignation de tâches, suivi de projets en temps réel, et tableaux de bord d\'équipe. Idéal pour les équipes de 2 à 500+ personnes.'
-    },
-    {
-      question: 'Y a-t-il une période d\'essai gratuite ?',
-      answer: 'Oui, nous offrons 14 jours d\'essai gratuit avec accès complet à toutes les fonctionnalités premium. Aucune carte de crédit requise pour commencer. Vous pouvez annuler à tout moment sans frais.'
-    },
-    {
-      question: 'Comment fonctionne la recommandation intelligente de tâches ?',
-      answer: 'L\'IA analyse votre historique, vos deadlines, l\'importance des tâches, et votre énergie selon les moments de la journée. Elle propose automatiquement le meilleur ordre d\'exécution et vous alerte sur les conflits potentiels.'
-    },
-    {
-      question: 'Time Pro fonctionne-t-il hors ligne ?',
-      answer: 'Time Pro fonctionne en mode hybride. Les fonctionnalités de base (consultation, modification de tâches) sont disponibles hors ligne. La synchronisation et les recommandations IA s\'activent dès que vous retrouvez une connexion internet.'
-    },
-    {
-      question: 'Quels sont les tarifs de Time Pro ?',
-      answer: 'Nous proposons un plan gratuit avec fonctionnalités de base, un plan Pro à 12€/mois avec IA avancée, et un plan Enterprise sur mesure. Tous les plans incluent un support client 24/7 et des mises à jour régulières.'
-    }
-  ];
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="faq" className="scroll-mt-24 py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-full mb-6">
             <HelpCircle className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">FAQ</span>
           </div>
-          
+
           <h2 className="text-4xl md:text-5xl font-bold text-text-dark mb-6">
             Questions
             <span className="text-primary block">fréquentes</span>
           </h2>
-          
-          <p className="text-xl text-text-gray">
-            Trouvez rapidement les réponses aux questions les plus courantes sur Time Pro.
+
+          <p className="text-xl text-[#4A6073]">
+            Des réponses courtes, sans promesse en l’air.
           </p>
         </div>
 
         <div className="space-y-4">
           {faqs.map((faq, index) => (
             <div
-              key={index}
-              className="bg-bg-light border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300"
+              key={faq.question}
+              className="bg-[#F8FCFD] border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300"
             >
               <button
                 onClick={() => toggleFAQ(index)}
                 className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
               >
-                <h3 className="text-lg font-semibold text-text-dark pr-8">
-                  {faq.question}
-                </h3>
+                <h3 className="text-lg font-semibold text-text-dark pr-8">{faq.question}</h3>
                 <div className="flex-shrink-0">
                   {openIndex === index ? (
                     <Minus className="w-5 h-5 text-primary" />
@@ -83,13 +90,11 @@ const FAQSection = () => {
                   )}
                 </div>
               </button>
-              
+
               {openIndex === index && (
                 <div className="px-8 pb-6">
                   <div className="border-t border-gray-200 pt-6">
-                    <p className="text-text-gray leading-relaxed">
-                      {faq.answer}
-                    </p>
+                    <p className="text-[#4A6073] leading-relaxed">{faq.answer}</p>
                   </div>
                 </div>
               )}
@@ -97,17 +102,18 @@ const FAQSection = () => {
           ))}
         </div>
 
-        {/* Contact CTA */}
         <div className="text-center mt-16 p-8 bg-gradient-to-r from-primary/10 to-blue-100 rounded-2xl">
-          <h3 className="text-2xl font-bold text-text-dark mb-4">
-            Vous ne trouvez pas votre réponse ?
-          </h3>
-          <p className="text-text-gray mb-6">
-            Notre équipe support est disponible 24/7 pour répondre à toutes vos questions.
+          <h3 className="text-2xl font-bold text-text-dark mb-4">Prêt à essayer ?</h3>
+          <p className="text-[#4A6073] mb-6">
+            Crée ton compte, écris tes tâches, et regarde ta journée se ranger.
           </p>
-          <button className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-lg font-semibold transition-all hover:shadow-lg hover:scale-105">
-            Contactez-nous
-          </button>
+          <Link
+            to="/signup"
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-lg font-semibold transition-all hover:shadow-lg hover:scale-105"
+          >
+            Planifier ma journée
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
     </section>

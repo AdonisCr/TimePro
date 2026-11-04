@@ -1,110 +1,76 @@
-import { Brain, Target, Zap, Shield, Users, TrendingUp } from 'lucide-react';
+import { ListChecks, CalendarDays, Timer, Info } from 'lucide-react';
+
+const steps = [
+  {
+    icon: ListChecks,
+    number: '1',
+    title: 'Tu écris tout en vrac',
+    description:
+      'Une tâche par ligne, comme ça vient. Pas de formulaire à remplir, pas de menu à parcourir.',
+  },
+  {
+    icon: CalendarDays,
+    number: '2',
+    title: "L'app range ta journée",
+    description:
+      'Elle estime les durées, repère les urgences et place chaque tâche dans un créneau, pauses comprises.',
+  },
+  {
+    icon: Timer,
+    number: '3',
+    title: 'Tu avances, tout est gardé',
+    description:
+      'Lance le chronomètre sur une tâche. Ton temps est enregistré, même si tu fermes l’onglet.',
+  },
+];
 
 const AboutSection = () => {
-  const features = [
-    {
-      icon: Brain,
-      title: 'IA Intelligente',
-      description: 'Notre intelligence artificielle apprend de vos habitudes pour optimiser automatiquement votre planning et maximiser votre efficacité.'
-    },
-    {
-      icon: Target,
-      title: 'Objectifs Personnalisés',
-      description: 'Définissez vos objectifs et laissez Time Pro créer le plan parfait pour les atteindre avec des recommandations sur mesure.'
-    },
-    {
-      icon: Zap,
-      title: 'Optimisation Automatique',
-      description: 'Réorganisation intelligente de vos tâches selon vos priorités, votre énergie et vos pics de productivité.'
-    },
-    {
-      icon: Shield,
-      title: 'Sécurisé et Privé',
-      description: 'Vos données sont protégées avec un chiffrement de niveau bancaire. Nous ne vendons jamais vos informations.'
-    },
-    {
-      icon: Users,
-      title: 'Collaboration Équipe',
-      description: 'Travaillez en équipe avec des outils de collaboration intégrés, partage de calendriers et suivi de projets.'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Analytics Avancés',
-      description: 'Tableaux de bord détaillés pour suivre votre progression et identifier les opportunités d\'amélioration.'
-    }
-  ];
-
   return (
-    <section id="about" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="how-it-works" className="scroll-mt-24 py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-20">
+        <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-[#00B4DB]/10 px-6 py-3 rounded-full mb-8">
-            <Brain className="w-5 h-5 text-[#00B4DB]" />
-            <span className="text-sm font-semibold text-[#00B4DB] uppercase tracking-wide">À propos de Time Pro</span>
+            <ListChecks className="w-5 h-5 text-[#00B4DB]" />
+            <span className="text-sm font-semibold text-[#00B4DB] uppercase tracking-wide">
+              Comment ça marche
+            </span>
           </div>
-          
-          <h2 className="text-5xl md:text-6xl font-bold text-[#1A2A49] mb-8">
-            La gestion du temps
-            <span className="text-[#00B4DB] block mt-2">réinventée par l'IA</span>
+
+          <h2 className="text-4xl md:text-5xl font-bold text-[#1A2A49] mb-6">
+            Trois étapes,
+            <span className="text-[#00B4DB]"> deux minutes</span>
           </h2>
-          
-          <p className="text-xl text-[#4A6073] max-w-4xl mx-auto leading-relaxed">
-            Time Pro révolutionne votre façon de gérer le temps en utilisant l'intelligence artificielle 
-            pour comprendre vos habitudes, optimiser votre planning et maximiser votre productivité.
+
+          <p className="text-xl text-[#4A6073] max-w-3xl mx-auto leading-relaxed">
+            Pas de méthode compliquée à apprendre. Tu écris, l'app range, tu travailles.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-          {features.map((feature, index) => (
+        <div className="grid md:grid-cols-3 gap-8">
+          {steps.map(({ icon: Icon, number, title, description }) => (
             <div
-              key={index}
-              className="group p-8 bg-[#F8FCFD] rounded-2xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-[#00B4DB]/20"
+              key={number}
+              className="relative p-8 bg-[#F8FCFD] rounded-2xl border border-gray-100 hover:border-[#00B4DB]/20 hover:shadow-xl transition-all duration-300"
             >
-              <div className="p-4 bg-[#00B4DB]/10 rounded-xl w-fit mb-6 group-hover:bg-[#00B4DB]/20 transition-colors">
-                <feature.icon className="w-8 h-8 text-[#00B4DB]" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-4 bg-[#00B4DB]/10 rounded-xl">
+                  <Icon className="w-8 h-8 text-[#00B4DB]" />
+                </div>
+                <span className="text-5xl font-bold text-[#00B4DB]/15">{number}</span>
               </div>
-              
-              <h3 className="text-2xl font-bold text-[#1A2A49] mb-4">
-                {feature.title}
-              </h3>
-              
-              <p className="text-[#4A6073] leading-relaxed text-lg">
-                {feature.description}
-              </p>
+
+              <h3 className="text-2xl font-bold text-[#1A2A49] mb-4">{title}</h3>
+              <p className="text-[#4A6073] leading-relaxed text-lg">{description}</p>
             </div>
           ))}
         </div>
 
-        {/* Stats Section */}
-        <div className="bg-gradient-to-r from-[#00B4DB] to-blue-600 rounded-3xl p-16 text-white">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold mb-6">
-              Rejoignez des milliers d'utilisateurs satisfaits
-            </h3>
-            <p className="text-blue-100 text-xl max-w-3xl mx-auto">
-              Découvrez pourquoi Time Pro est la solution de gestion du temps préférée des professionnels 
-              et des équipes les plus performantes.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-5xl font-bold mb-3">50k+</div>
-              <div className="text-blue-100 text-lg">Utilisateurs actifs</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-3">98%</div>
-              <div className="text-blue-100 text-lg">Taux de satisfaction</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-3">2.5M</div>
-              <div className="text-blue-100 text-lg">Heures optimisées</div>
-            </div>
-            <div>
-              <div className="text-5xl font-bold mb-3">40%</div>
-              <div className="text-blue-100 text-lg">Gain de productivité</div>
-            </div>
-          </div>
+        <div className="mt-12 max-w-3xl mx-auto flex items-start gap-3 p-5 bg-gray-50 border border-gray-100 rounded-xl">
+          <Info className="w-5 h-5 text-[#4A6073] mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-[#4A6073] leading-relaxed">
+            Pas de boîte noire : les durées et les priorités sont estimées par des règles
+            simples, que tu peux corriger à la main avant de valider ton planning.
+          </p>
         </div>
       </div>
     </section>

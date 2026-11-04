@@ -2,7 +2,7 @@ import Header from '../components/home/Header.tsx';
 import HeroSection from '../components/home/HeroSection.tsx';
 import AboutSection from '../components/home/AboutSection.tsx';
 import FeaturesSection from '../components/home/FeaturesSection.tsx';
-import TestimonialsSection from '../components/home/TestimonialsSection.tsx';
+import BetaSection from '../components/home/BetaSection.tsx';
 import PricingSection from '../components/home/PricingSection.tsx';
 import FAQSection from '../components/home/FAQSection.tsx';
 import Footer from '../components/home/Footer.tsx';
@@ -15,7 +15,7 @@ const HomePage = () => {
         <HeroSection />
         <AboutSection />
         <FeaturesSection />
-        <TestimonialsSection />
+        <BetaSection />
         <PricingSection />
         <FAQSection />
       </main>

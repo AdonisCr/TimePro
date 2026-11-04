@@ -30,6 +30,7 @@ import { useTasks, type Task as ApiTask } from '../hooks/useTasks';
 import { useProjects } from '../hooks/useProjects';
 import { useUser } from '../hooks/useUser';
 import { useTimeEntries } from '../hooks/useTimeEntries';
+import { useNotifications } from '../hooks/useNotifications';
 import { generateInsights } from '../lib/productivity';
 import { getTodayReport, type FocusMethod } from '../lib/focus';
 
@@ -71,6 +72,7 @@ function Dashboard() {
   }, []);
   
   const { user, logout, refreshUser } = useUser();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, remove: removeNotification } = useNotifications();
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask, fetchTasks } = useTasks();
   const { projects, loading: projectsLoading, createProject } = useProjects();
   const { entries: timeEntries } = useTimeEntries();
@@ -322,7 +324,15 @@ function Dashboard() {
       <div className="flex-1 flex flex-col min-h-0 ml-0 lg:ml-64">
         {/* Header - fixed at top */}
         <div className="sticky top-0 z-20">
-          <Header onLogout={logout} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+          <Header
+            onLogout={logout}
+            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onClearNotification={removeNotification}
+          />
         </div>
         
         {/* Scrollable Content */}

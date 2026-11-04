@@ -2,25 +2,16 @@ import React, { useState } from 'react';
 import { Search, Bell, Menu, Check, Trash2, X, Wifi, WifiOff, BellRing, AlertTriangle } from 'lucide-react';
 import useOffline from '../../hooks/useOffline';
 import usePushNotifications, { isPushConfigured } from '../../hooks/usePushNotifications';
-
-interface Notification {
-  id: string;
-  type: 'reminder' | 'insight' | 'achievement' | 'warning';
-  title: string;
-  message: string;
-  icon: string;
-  timestamp: Date;
-  read: boolean;
-}
+import type { AppNotification } from '../../hooks/useNotifications';
 
 interface HeaderProps {
   onLogout?: () => void;
   onMenuClick?: () => void;
-  notifications?: Notification[];
+  notifications?: AppNotification[];
   unreadCount?: number;
-  onMarkAsRead?: (id: string) => void;
+  onMarkAsRead?: (id: number) => void;
   onMarkAllAsRead?: () => void;
-  onClearNotification?: (id: string) => void;
+  onClearNotification?: (id: number) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -41,9 +32,9 @@ const Header: React.FC<HeaderProps> = ({
     year: 'numeric'
   });
 
-  const formatTimeAgo = (date: Date) => {
+  const formatTimeAgo = (date: string) => {
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = now.getTime() - new Date(date).getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -54,13 +45,22 @@ const Header: React.FC<HeaderProps> = ({
     return `Il y a ${diffDays}j`;
   };
 
-  const getNotificationColor = (type: Notification['type']) => {
+  const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'reminder': return 'bg-blue-50';
-      case 'insight': return 'bg-purple-50';
-      case 'achievement': return 'bg-green-50';
-      case 'warning': return 'bg-red-50';
+      case 'task_due': return 'bg-amber-50';
+      case 'team_invitation': return 'bg-blue-50';
+      case 'team_member_joined': return 'bg-green-50';
       default: return 'bg-gray-50';
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'task_due': return '⏰';
+      case 'team_invitation': return '📨';
+      case 'team_member_joined': return '👥';
+      case 'task_done': return '✅';
+      default: return '🔔';
     }
   };
 
@@ -117,8 +117,9 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Push Notifications Toggle : masqué tant que les clés VAPID ne sont pas configurées */}
-          {isSupported && isPushConfigured && (
+          {/* Push Notifications Toggle : uniquement si les clés VAPID sont configurées
+              et en production (le service worker n'est pas actif en développement). */}
+          {isSupported && isPushConfigured && import.meta.env.PROD && (
             <button
               onClick={() => isSubscribed ? unsubscribe() : subscribe()}
               className={`p-2 rounded-lg transition-colors ${
@@ -184,22 +185,22 @@ const Header: React.FC<HeaderProps> = ({
                       notifications.map(notif => (
                         <div 
                           key={notif.id} 
-                          className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${getNotificationColor(notif.type)} ${!notif.read ? 'bg-white' : 'opacity-60'}`}
+                          className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${getNotificationColor(notif.type)} ${!notif.is_read ? 'bg-white' : 'opacity-60'}`}
                         >
                           <div className="flex items-start gap-3">
-                            <span className="text-xl">{notif.icon}</span>
+                            <span className="text-xl">{getNotificationIcon(notif.type)}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <h4 className="font-medium text-text-dark text-sm">{notif.title}</h4>
-                                {!notif.read && (
+                                {!notif.is_read && (
                                   <span className="w-2 h-2 bg-primary rounded-full" />
                                 )}
                               </div>
                               <p className="text-text-soft text-xs mt-0.5">{notif.message}</p>
-                              <p className="text-xs text-text-soft mt-2">{formatTimeAgo(notif.timestamp)}</p>
+                              <p className="text-xs text-text-soft mt-2">{formatTimeAgo(notif.created_at)}</p>
                             </div>
                             <div className="flex items-center gap-1">
-                              {!notif.read && onMarkAsRead && (
+                              {!notif.is_read && onMarkAsRead && (
                                 <button 
                                   onClick={() => onMarkAsRead(notif.id)}
                                   className="p-1 text-gray-400 hover:text-green-500 rounded"

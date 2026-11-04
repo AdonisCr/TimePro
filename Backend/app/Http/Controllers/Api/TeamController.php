@@ -9,6 +9,7 @@ use App\Models\TeamInvitation;
 use App\Models\TeamMember;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,7 +66,7 @@ class TeamController extends Controller
     {
         $member = $team->members()->where('user_id', $request->user()->id)->first();
         
-        if (!$member || $member->role !== 'admin') {
+        if (!$member || $member->pivot->role !== 'admin') {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
@@ -92,7 +93,7 @@ class TeamController extends Controller
     {
         $member = $team->members()->where('user_id', $request->user()->id)->first();
         
-        if (!$member || $member->role !== 'admin') {
+        if (!$member || $member->pivot->role !== 'admin') {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
@@ -101,9 +102,9 @@ class TeamController extends Controller
             'role' => ['nullable', Rule::in(['admin', 'member', 'viewer'])],
         ]);
 
-        $existingMember = $team->members()->whereHas('user', function ($q) use ($validated) {
-            $q->where('email', $validated['email']);
-        })->first();
+        $existingMember = $team->members()
+            ->whereRaw('LOWER(users.email) = ?', [mb_strtolower($validated['email'])])
+            ->first();
 
         if ($existingMember) {
             return response()->json(['message' => 'Utilisateur déjà membre'], 400);
@@ -133,6 +134,22 @@ class TeamController extends Controller
 
         Mail::to($validated['email'])->send(new TeamInvitationMail($invitation, $acceptUrl));
 
+        // Si la personne a déjà un compte, on l'informe aussi dans l'application.
+        $invitedUser = User::whereRaw('LOWER(email) = ?', [mb_strtolower($validated['email'])])->first();
+
+        if ($invitedUser) {
+            NotificationService::notify(
+                $invitedUser,
+                'team_invitation',
+                'Invitation à rejoindre une équipe',
+                $request->user()->name . ' t\'invite à rejoindre « ' . $team->name . ' ».',
+                [
+                    'team_id' => $team->id,
+                    'invitation_token' => $invitation->token,
+                ]
+            );
+        }
+
         $team->load('members', 'invitations');
         return response()->json([
             ...$team->toArray(),
@@ -145,7 +162,7 @@ class TeamController extends Controller
     {
         $member = $team->members()->where('user_id', $request->user()->id)->first();
         
-        if (!$member || $member->role !== 'admin') {
+        if (!$member || $member->pivot->role !== 'admin') {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
@@ -161,7 +178,7 @@ class TeamController extends Controller
     {
         $member = $team->members()->where('user_id', $request->user()->id)->first();
         
-        if (!$member || $member->role !== 'admin') {
+        if (!$member || $member->pivot->role !== 'admin') {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 

@@ -36,17 +36,18 @@ class PublicApiController extends Controller
             ], 403);
         }
 
-        $date = $request->input('date', now()->toDateString());
+        $validated = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        $date = $validated['date'] ?? now()->toDateString();
         
         $cacheKey = "public_planning_{$userId}_{$date}";
         
-        $planning = Cache::remember($cacheKey, 3600, function () use ($user, $date) {
+        $planning = Cache::remember($cacheKey, 300, function () use ($user, $date) {
             $tasks = Task::where('user_id', $user->id)
                 ->where('status', '!=', 'done')
-                ->where(function ($query) use ($date) {
-                    $query->where('due_date', $date)
-                          ->orWhereNull('due_date');
-                })
+                ->whereDate('due_date', $date)
                 ->with('project:id,name,color')
                 ->orderBy('priority', 'desc')
                 ->orderBy('due_date', 'asc')
@@ -82,8 +83,8 @@ class PublicApiController extends Controller
                 'time_entries' => $timeEntries,
                 'stats' => [
                     'total_tasks' => $tasks->count(),
-                    'completed_today' => TimeEntry::where('user_id', $user->id)
-                        ->whereDate('start_time', $date)
+                    'completed_today' => Task::where('user_id', $user->id)
+                        ->whereDate('completed_at', $date)
                         ->count(),
                 ],
             ];
@@ -118,7 +119,7 @@ class PublicApiController extends Controller
 
         $cacheKey = "public_stats_{$userId}";
         
-        $stats = Cache::remember($cacheKey, 3600, function () use ($user) {
+        $stats = Cache::remember($cacheKey, 300, function () use ($user) {
             $totalTasks = Task::where('user_id', $user->id)->count();
             $completedTasks = Task::where('user_id', $user->id)
                 ->where('status', 'done')
@@ -184,7 +185,7 @@ class PublicApiController extends Controller
 
         $cacheKey = "public_projects_{$userId}";
         
-        $projects = Cache::remember($cacheKey, 3600, function () use ($user) {
+        $projects = Cache::remember($cacheKey, 300, function () use ($user) {
             return Project::where('user_id', $user->id)
                 ->get()
                 ->map(fn($project) => [

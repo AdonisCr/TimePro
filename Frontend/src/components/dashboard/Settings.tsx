@@ -1,7 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { User, Bell, Shield, Save, Eye, EyeOff, LogOut, Camera, Moon, Sun, Monitor, Loader2, Check, ZoomIn, ZoomOut } from 'lucide-react';
+import { User, Bell, Shield, Share2, Save, Eye, EyeOff, LogOut, Camera, Moon, Sun, Monitor, Loader2, Check, ZoomIn, ZoomOut } from 'lucide-react';
 import api from '../../lib/axios';
 import { useTheme } from '../../context/ThemeContext';
+import NotificationSettings from './NotificationSettings';
+import SharingSettings from './SharingSettings';
 
 interface UserData {
   id: number;
@@ -56,6 +58,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
     { id: 'profile', label: 'Profil', icon: User },
     { id: 'security', label: 'Sécurité', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'sharing', label: 'Partage', icon: Share2 },
   ];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,29 +409,10 @@ const Settings: React.FC<SettingsProps> = ({ user, onLogout, onProfileUpdate }) 
         );
 
       case 'notifications':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-text-dark mb-4">Notifications</h3>
-            <p className="text-text-soft text-sm">Gérez vos préférences de notifications.</p>
-            {[
-              { label: 'Rappels de tâches', desc: 'Recevoir une notification avant l\'échéance d\'une tâche' },
-              { label: 'Mentions', desc: 'Être notifié quand quelqu\'un vous mentionne' },
-              { label: 'Invitations', desc: 'Notifications pour les invitations à rejoindre une équipe' },
-              { label: 'Rapports hebdomadaires', desc: 'Recevoir un résumé de votre activité chaque semaine' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-text-dark text-sm">{item.label}</p>
-                  <p className="text-xs text-text-soft">{item.desc}</p>
-                </div>
-                <div className="relative w-12 h-6 rounded-full bg-gray-300 cursor-not-allowed opacity-50">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow" />
-                </div>
-              </div>
-            ))}
-            <p className="text-xs text-text-soft italic mt-4">Configuration des notifications disponible prochainement.</p>
-          </div>
-        );
+        return <NotificationSettings />;
+
+      case 'sharing':
+        return <SharingSettings />;
 
       default:
         return null;

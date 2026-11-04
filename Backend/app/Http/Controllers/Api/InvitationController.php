@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\TeamInvitation;
 use App\Models\TeamMember;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -55,6 +56,19 @@ class InvitationController extends Controller
         ]);
 
         $invitation->update(['accepted_at' => now()]);
+
+        // Prévient les administrateurs de l'équipe (sauf la personne qui vient d'arriver).
+        NotificationService::notifyTeamAdmins(
+            $invitation->team,
+            'team_member_joined',
+            'Nouveau membre dans l\'équipe',
+            $user->name . ' a rejoint « ' . $invitation->team->name . ' ».',
+            [
+                'team_id' => $invitation->team_id,
+                'user_id' => $user->id,
+            ],
+            $user->id
+        );
 
         return response()->json([
             'message' => 'Invitation acceptée',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UserPreference;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class UserPreferenceController extends Controller
 {
@@ -54,12 +55,22 @@ class UserPreferenceController extends Controller
             'other_tools_used' => ['nullable', 'array'],
             'specific_constraints' => ['nullable', 'string'],
             'onboarding_completed' => ['nullable', 'boolean'],
+            'public_planning' => ['nullable', 'boolean'],
+            'public_stats' => ['nullable', 'boolean'],
+            'public_projects' => ['nullable', 'boolean'],
         ]);
 
         $preferences = $request->user()->preferences()->updateOrCreate(
             ['user_id' => $request->user()->id],
             $validated
         );
+
+        // Les données publiques sont mises en cache : on le vide dès que les
+        // réglages de partage changent, pour que la coupure soit immédiate.
+        $userId = $request->user()->id;
+        Cache::forget("public_stats_{$userId}");
+        Cache::forget("public_projects_{$userId}");
+        Cache::forget("public_planning_{$userId}_" . now()->toDateString());
 
         return response()->json([
             'message' => 'Préférences sauvegardées',

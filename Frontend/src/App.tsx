@@ -21,6 +21,7 @@ import MonthlyGoals from "./pages/MonthlyGoals";
 import InvitationPage from "./pages/InvitationPage";
 import CalendarPage from "./pages/CalendarPage";
 import SharePlanningPage from "./pages/SharePlanningPage";
+import SharedPlanningPage from "./pages/SharedPlanningPage";
 import ExportPage from "./pages/ExportPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import { useTasks, type Task as ApiTask } from "./hooks/useTasks";
@@ -86,6 +87,7 @@ const AnimatedRoutes = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/invitation/:token" element={<InvitationPage />} />
+          <Route path="/shared/planning/:userId" element={<SharedPlanningPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
           {/* Pages protégées — redirect vers /login si non connecté */}

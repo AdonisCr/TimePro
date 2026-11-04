@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Nettoyage quotidien des clés d'idempotence (7 jours de conservation).
 Schedule::command('idempotency:prune')->dailyAt('03:15');
+
+// Rappel des tâches dont l'échéance arrive dans les prochaines 24 heures.
+Schedule::command('notifications:due-soon')->dailyAt('08:00');

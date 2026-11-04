@@ -36,6 +36,9 @@ interface UserPreferences {
   other_tools_used?: string[] | null;
   specific_constraints?: string | null;
   onboarding_completed?: boolean;
+  public_planning?: boolean;
+  public_stats?: boolean;
+  public_projects?: boolean;
 }
 
 interface UsePreferencesReturn {

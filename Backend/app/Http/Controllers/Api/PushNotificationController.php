@@ -124,7 +124,7 @@ class PushNotificationController extends Controller
 
         foreach ($subscriptions as $subscription) {
             $webPush->queueNotification(
-                new \Minishlink\WebPush\Subscription([
+                \Minishlink\WebPush\Subscription::create([
                     'endpoint' => $subscription->endpoint,
                     'keys' => $subscription->keys,
                 ]),
@@ -132,7 +132,7 @@ class PushNotificationController extends Controller
             );
         }
 
-        foreach ($webPush->send() as $report) {
+        foreach ($webPush->flush() as $report) {
             if ($report->isSuccess()) {
                 $sent++;
 

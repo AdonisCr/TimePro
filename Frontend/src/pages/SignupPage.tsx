@@ -265,7 +265,7 @@ const SignupPage = () => {
               Créez votre compte
             </h1>
             <p className="text-[#7a91a6] mb-7">
-              Essai gratuit de 14 jours, sans carte bancaire.
+              Bêta gratuite, sans carte bancaire.
             </p>
 
             {/* General error */}

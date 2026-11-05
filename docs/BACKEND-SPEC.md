@@ -1,5 +1,11 @@
 # Time Pro — Spécification Backend Complète
 
+> **Document de conception, pas un état des lieux.**
+> Il décrit la cible imaginée au départ et peut mentionner des fonctions qui ne sont
+> pas encore livrées. Pour savoir ce qui existe réellement aujourd'hui, voir
+> [`ETAT-ACTUEL.md`](./ETAT-ACTUEL.md).
+
+
 > **Architecture** : Laravel 12 + PHP 8.2 + Sanctum + MySQL + Redis
 > **Objectif** : Backend scalable, maintainable, prêt pour millions d'utilisateurs.
 

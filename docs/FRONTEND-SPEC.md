@@ -1,5 +1,11 @@
 # Time Pro — Spécification Frontend Complète
 
+> **Document de conception, pas un état des lieux.**
+> Il décrit la cible imaginée au départ et peut mentionner des fonctions qui ne sont
+> pas encore livrées. Pour savoir ce qui existe réellement aujourd'hui, voir
+> [`ETAT-ACTUEL.md`](./ETAT-ACTUEL.md).
+
+
 > **Objectif** : Transformer Time Pro d'un gestionnaire de tâches en un coach de temps intelligent.
 > **Promesse** : "Comprends ton temps avant d'essayer de le gérer."
 

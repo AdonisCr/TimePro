@@ -5,6 +5,7 @@ import { Clock, Menu, X } from 'lucide-react';
 const NAV_ITEMS = [
   { id: 'how-it-works', label: 'Comment ça marche' },
   { id: 'features', label: 'Fonctionnalités' },
+  { id: 'beta', label: 'Bêta' },
   { id: 'pricing', label: 'Tarifs' },
 ];
 
@@ -50,7 +51,7 @@ const Header = () => {
             <span className="text-2xl font-bold text-white">Time Pro</span>
           </Link>
 
-          <nav className="hidden xl:flex items-center space-x-8">
+          <nav className="hidden xl:flex items-center space-x-5">
             {NAV_ITEMS.map(item => (
               <button
                 key={item.id}
@@ -62,7 +63,7 @@ const Header = () => {
             ))}
           </nav>
 
-          <div className="hidden xl:flex items-center space-x-4">
+          <div className="hidden xl:flex items-center space-x-3">
             <Link
               to="/login"
               className="text-white/70 hover:text-white transition-colors font-medium text-base"

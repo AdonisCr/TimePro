@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider } from "./context/AuthContext";
@@ -5,25 +6,39 @@ import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { PageTransition } from "./components/ui/Animations";
 
+// La page d'accueil reste chargée tout de suite : c'est la première chose
+// que voit un visiteur. Les autres pages sont chargées à la demande, ce qui
+// allège le fichier JavaScript initial.
 import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import Dashboard from "./pages/Dashboard";
-import BrainDumpPage from "./pages/BrainDumpPage";
-import FocusPage from "./pages/FocusPage";
-import PlanningPage from "./pages/PlanningPage";
-import HabitsPage from "./pages/HabitsPage";
-import WeeklyReport from "./pages/WeeklyReport";
-import MonthlyGoals from "./pages/MonthlyGoals";
-import InvitationPage from "./pages/InvitationPage";
-import CalendarPage from "./pages/CalendarPage";
-import SharePlanningPage from "./pages/SharePlanningPage";
-import SharedPlanningPage from "./pages/SharedPlanningPage";
-import ExportPage from "./pages/ExportPage";
-import AuthCallbackPage from "./pages/AuthCallbackPage";
+
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignupPage = lazy(() => import("./pages/SignupPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const BrainDumpPage = lazy(() => import("./pages/BrainDumpPage"));
+const FocusPage = lazy(() => import("./pages/FocusPage"));
+const PlanningPage = lazy(() => import("./pages/PlanningPage"));
+const HabitsPage = lazy(() => import("./pages/HabitsPage"));
+const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
+const MonthlyGoals = lazy(() => import("./pages/MonthlyGoals"));
+const InvitationPage = lazy(() => import("./pages/InvitationPage"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const SharePlanningPage = lazy(() => import("./pages/SharePlanningPage"));
+const SharedPlanningPage = lazy(() => import("./pages/SharedPlanningPage"));
+const ExportPage = lazy(() => import("./pages/ExportPage"));
+const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
+
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div
+      className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"
+      role="status"
+      aria-label="Chargement de la page"
+    />
+  </div>
+);
 import { useTasks, type Task as ApiTask } from "./hooks/useTasks";
 import { useTimeEntries, type TimeEntry as ApiTimeEntry } from "./hooks/useTimeEntries";
 import type { Task as ProdTask } from "./lib/productivity";
@@ -79,35 +94,37 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <PageTransition key={location.pathname}>
-        <Routes location={location}>
-          {/* Pages publiques */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/invitation/:token" element={<InvitationPage />} />
-          <Route path="/shared/planning/:userId" element={<SharedPlanningPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes location={location}>
+            {/* Pages publiques */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/invitation/:token" element={<InvitationPage />} />
+            <Route path="/shared/planning/:userId" element={<SharedPlanningPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-          {/* Pages protégées — redirect vers /login si non connecté */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/brain-dump" element={<BrainDumpPage />} />
-            <Route path="/focus" element={<FocusPage />} />
-            <Route path="/planning" element={<PlanningRoute />} />
-            <Route path="/habits" element={<HabitsPage />} />
-            <Route path="/weekly-report" element={<WeeklyReportRoute />} />
-            <Route path="/monthly-goals" element={<MonthlyGoals />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/share-planning" element={<SharePlanningPage />} />
-            <Route path="/export" element={<ExportPage />} />
-          </Route>
+            {/* Pages protégées — redirect vers /login si non connecté */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/brain-dump" element={<BrainDumpPage />} />
+              <Route path="/focus" element={<FocusPage />} />
+              <Route path="/planning" element={<PlanningRoute />} />
+              <Route path="/habits" element={<HabitsPage />} />
+              <Route path="/weekly-report" element={<WeeklyReportRoute />} />
+              <Route path="/monthly-goals" element={<MonthlyGoals />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/share-planning" element={<SharePlanningPage />} />
+              <Route path="/export" element={<ExportPage />} />
+            </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </PageTransition>
     </AnimatePresence>
   );

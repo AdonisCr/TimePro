@@ -29,6 +29,10 @@ class Project extends Model
         'budget_status',
     ];
 
+    protected $hidden = [
+        'time_entries_sum_duration',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -60,7 +64,13 @@ class Project extends Model
 
     public function getSpentSecondsAttribute(): int
     {
-        return $this->timeEntries()->sum('duration') ?? 0;
+        // Quand les projets sont chargés avec withSum('timeEntries', 'duration'),
+        // la somme est déjà là : plus besoin d'une requête par projet.
+        if (array_key_exists('time_entries_sum_duration', $this->attributes)) {
+            return (int) ($this->attributes['time_entries_sum_duration'] ?? 0);
+        }
+
+        return (int) ($this->timeEntries()->sum('duration') ?? 0);
     }
 
     public function getBudgetUsagePercentAttribute(): int

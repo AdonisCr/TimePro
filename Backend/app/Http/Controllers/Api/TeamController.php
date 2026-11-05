@@ -219,43 +219,46 @@ class TeamController extends Controller
 
         $projectId = $request->get('project_id');
 
-        $membersData = $team->members->map(function (User $user) use ($dateStart, $projectId) {
-            $query = TimeEntry::where('user_id', $user->id)
-                ->where('start_time', '>=', $dateStart);
+        // Une seule requête agrégée pour tous les membres : le total, le
+        // nombre d'entrées, le détail par jour et par projet sont calculés
+        // en mémoire. Avant, on faisait 4 requêtes par membre.
+        $rows = TimeEntry::query()
+            ->whereIn('user_id', $team->members->pluck('id'))
+            ->where('start_time', '>=', $dateStart)
+            ->when($projectId, fn ($query) => $query->where('project_id', $projectId))
+            ->select(
+                'user_id',
+                'project_id',
+                DB::raw('DATE(start_time) as day'),
+                DB::raw('SUM(duration) as total'),
+                DB::raw('COUNT(*) as entries')
+            )
+            ->groupBy('user_id', 'project_id', DB::raw('DATE(start_time)'))
+            ->get();
 
-            if ($projectId) {
-                $query->where('project_id', $projectId);
-            }
+        $membersData = $team->members->map(function (User $user) use ($rows) {
+            $memberRows = $rows->where('user_id', $user->id);
 
-            $totalSeconds = (clone $query)->sum('duration');
-            $entriesCount = (clone $query)->count();
+            $byDay = $memberRows
+                ->groupBy('day')
+                ->map(fn ($dayRows) => (int) $dayRows->sum('total'))
+                ->sortKeys();
 
-            $byDay = (clone $query)
-                ->select(DB::raw('DATE(start_time) as date'), DB::raw('SUM(duration) as total'))
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get()
-                ->mapWithKeys(fn ($row) => [$row->date => (int) $row->total]);
-
-            $entries = (clone $query)
-                ->whereNotNull('project_id')
-                ->select('project_id', 'duration')
-                ->get();
-
-            $byProject = $entries->groupBy('project_id')->map(function ($rows, $pid) {
-                $first = $rows->first();
-                return [
+            $byProject = $memberRows
+                ->filter(fn ($row) => $row->project_id !== null)
+                ->groupBy('project_id')
+                ->map(fn ($projectRows, $pid) => [
                     'project_id' => (int) $pid,
-                    'total_seconds' => (int) $rows->sum('duration'),
-                ];
-            })->values();
+                    'total_seconds' => (int) $projectRows->sum('total'),
+                ])
+                ->values();
 
             return [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
                 'user_email' => $user->email,
-                'total_seconds' => $totalSeconds,
-                'entries_count' => $entriesCount,
+                'total_seconds' => (int) $memberRows->sum('total'),
+                'entries_count' => (int) $memberRows->sum('entries'),
                 'by_day' => $byDay,
                 'by_project' => $byProject,
             ];

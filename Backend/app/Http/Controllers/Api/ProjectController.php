@@ -15,6 +15,7 @@ class ProjectController extends Controller
     {
         $perPage = (int) $request->get('per_page', 20);
         $projects = $request->user()->projects()
+            ->withSum('timeEntries', 'duration')
             ->orderBy('created_at', 'desc')
             ->paginate(min($perPage, 100));
 

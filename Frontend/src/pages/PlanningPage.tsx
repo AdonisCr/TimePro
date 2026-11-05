@@ -153,7 +153,10 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
   }, [isToday, todayBlocks, timeBlocks]);
 
   const getBlockStyle = (block: TimeBlock) => {
-    const topOffset = (block.startHour - 8) * SLOT_HEIGHT + (block.startMinute / 60) * SLOT_HEIGHT;
+    const topOffset = Math.max(
+      0,
+      (block.startHour - 8) * SLOT_HEIGHT + (block.startMinute / 60) * SLOT_HEIGHT
+    );
     const height = (block.duration / 60) * SLOT_HEIGHT;
     
     return {
@@ -182,12 +185,13 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
     .reduce((acc, b) => acc + b.duration, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-dark">Planning intelligent</h1>
-          <p className="text-text-soft">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-text-dark">Planning intelligent</h1>
+          <p className="text-sm sm:text-base text-text-soft">
             {formatTime(totalWorkMinutes)} de travail planifié
             {isToday && todayBlocks && todayBlocks.length > 0
               ? ' • planning du jour synchronisé'
@@ -196,14 +200,15 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
         </div>
         
         {/* Date navigation */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 sm:justify-end">
           <button
             onClick={() => setSelectedDate(prev => new Date(prev.setDate(prev.getDate() - 1)))}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            aria-label="Jour précédent"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="font-medium text-text-dark min-w-[150px] text-center">
+          <span className="font-medium text-text-dark text-sm sm:text-base text-center min-w-0">
             {isToday ? 'Aujourd’hui · ' : ''}
             {selectedDate.toLocaleDateString('fr-FR', { 
               weekday: 'long', 
@@ -213,7 +218,8 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
           </span>
           <button
             onClick={() => setSelectedDate(prev => new Date(prev.setDate(prev.getDate() + 1)))}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            aria-label="Jour suivant"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -255,17 +261,23 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
               className="absolute left-0 right-0 border-t border-gray-100"
               style={{ top: `${(hour - 8) * SLOT_HEIGHT}px` }}
             >
-              <span className="absolute -top-3 left-4 text-xs text-text-soft bg-white px-1">
+              <span
+                className={`absolute left-2 sm:left-4 text-xs text-text-soft bg-white px-1 ${
+                  hour === 8 ? 'top-1' : '-top-3'
+                }`}
+              >
                 {hour}:00
               </span>
             </div>
           ))}
 
           {/* Time blocks */}
-          {displayBlocks.map(block => (
+          {displayBlocks.map(block => {
+            const isShort = block.duration < 45;
+            return (
             <div
               key={block.id}
-              className={`absolute left-20 right-4 rounded-lg border p-2 transition-shadow ${getBlockColor(block)} ${
+              className={`absolute left-14 sm:left-20 right-4 rounded-lg border p-2 overflow-hidden transition-shadow ${getBlockColor(block)} ${
                 block.task ? 'cursor-pointer hover:shadow-md' : ''
               }`}
               style={getBlockStyle(block)}
@@ -282,38 +294,53 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
                   ☕ Pause
                 </div>
               ) : block.task ? (
-                <div className="h-full flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      {block.id.startsWith('frog-') && <span className="text-sm">🐸</span>}
-                      <h4 className="font-medium text-text-dark text-sm truncate">{block.task.title}</h4>
+                isShort ? (
+                  <div className="h-full flex items-center justify-between gap-2">
+                    <h4 className="font-medium text-text-dark text-sm truncate">{block.task.title}</h4>
+                    <span className="text-xs text-text-soft shrink-0">{formatTime(block.duration)}</span>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col justify-between min-h-0">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {block.id.startsWith('frog-') && <span className="text-sm shrink-0">🐸</span>}
+                        <h4 className="font-medium text-text-dark text-sm truncate">{block.task.title}</h4>
+                      </div>
+                      {block.task.project && (
+                        <span 
+                          className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full text-white truncate max-w-full"
+                          style={{ backgroundColor: block.task.project.color }}
+                        >
+                          {block.task.project.name}
+                        </span>
+                      )}
                     </div>
-                    {block.task.project && (
-                      <span 
-                        className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full text-white"
-                        style={{ backgroundColor: block.task.project.color }}
-                      >
-                        {block.task.project.name}
-                      </span>
-                    )}
+                    <div className="flex items-center justify-between text-xs text-text-soft">
+                      <span>{formatTime(block.duration)}</span>
+                      <Target className="w-3 h-3" />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-text-soft">
-                    <span>{formatTime(block.duration)}</span>
-                    <Target className="w-3 h-3" />
-                  </div>
-                </div>
+                )
               ) : block.title ? (
-                <div className="h-full flex flex-col justify-between">
-                  <h4 className="font-medium text-text-dark text-sm truncate">{block.title}</h4>
-                  <span className="text-xs text-text-soft">{formatTime(block.duration)}</span>
-                </div>
+                isShort ? (
+                  <div className="h-full flex items-center justify-between gap-2">
+                    <h4 className="font-medium text-text-dark text-sm truncate">{block.title}</h4>
+                    <span className="text-xs text-text-soft shrink-0">{formatTime(block.duration)}</span>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col justify-between min-h-0">
+                    <h4 className="font-medium text-text-dark text-sm truncate">{block.title}</h4>
+                    <span className="text-xs text-text-soft">{formatTime(block.duration)}</span>
+                  </div>
+                )
               ) : null}
             </div>
-          ))}
+            );
+          })}
 
           {/* Current time indicator */}
           <div 
-            className="absolute left-16 right-4 h-0.5 bg-red-500 z-10"
+            className="absolute left-10 sm:left-16 right-4 h-0.5 bg-red-500 z-10"
             style={{ 
               top: `${(new Date().getHours() - 8) * SLOT_HEIGHT + (new Date().getMinutes() / 60) * SLOT_HEIGHT}px` 
             }}
@@ -339,6 +366,7 @@ const PlanningPage = ({ tasks }: PlanningPageProps) => {
           <Target className="w-5 h-5" />
           <span>Mode Focus</span>
         </button>
+      </div>
       </div>
     </div>
   );

@@ -10,16 +10,16 @@ const HeroSection = () => {
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#00B4DB]/5 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
-        <div className="grid lg:grid-cols-2 items-center gap-14">
+      <div className="relative z-10 site-container mx-auto px-6 w-full">
+        <div className="grid xl:grid-cols-2 items-center gap-14">
           {/* Texte */}
-          <div className="text-center lg:text-left">
+          <div className="text-center xl:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
               <span className="w-2 h-2 rounded-full bg-[#00B4DB] animate-pulse" />
               <span className="text-white/70 text-sm font-medium">Bêta ouverte, accès gratuit</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+            <h1 className="text-4xl md:text-5xl 2xl:text-6xl font-bold text-white leading-tight mb-6">
               Tu vides ta tête.
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00B4DB] to-[#00d4ff]">
@@ -29,28 +29,28 @@ const HeroSection = () => {
               </span>
             </h1>
 
-            <p className="text-lg text-white/60 max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed">
+            <p className="text-lg text-white/60 max-w-xl mx-auto xl:mx-0 mb-10 leading-relaxed">
               Écris tout ce que tu as à faire, en vrac. Time Pro estime les durées,
               repère les urgences et range tes tâches dans ta journée.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center xl:items-start justify-center xl:justify-start gap-3 mb-8">
               <Link
                 to="/signup"
-                className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#00B4DB] to-[#0086a8] hover:from-[#00c9ed] hover:to-[#00a3c2] text-white px-8 py-4 rounded-full font-semibold text-lg transition-all hover:shadow-lg hover:shadow-[#00B4DB]/30 hover:-translate-y-1 w-full sm:w-auto"
+                className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#00B4DB] to-[#0086a8] hover:from-[#00c9ed] hover:to-[#00a3c2] text-white px-6 py-4 rounded-full font-semibold text-lg whitespace-nowrap transition-all hover:shadow-lg hover:shadow-[#00B4DB]/30 hover:-translate-y-1 w-full sm:w-auto"
               >
                 Planifier ma journée
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
                 href="#features"
-                className="inline-flex items-center justify-center gap-2 border border-white/20 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all hover:bg-white/10 hover:-translate-y-1 w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 border border-white/20 text-white px-6 py-4 rounded-full font-semibold text-lg whitespace-nowrap transition-all hover:bg-white/10 hover:-translate-y-1 w-full sm:w-auto"
               >
                 Voir les fonctionnalités
               </a>
             </div>
 
-            <div className="flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-3 text-white/50 text-sm">
+            <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 text-white/50 text-sm">
               <span className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-[#00B4DB]" />
                 Sans carte bancaire
@@ -67,7 +67,7 @@ const HeroSection = () => {
           </div>
 
           {/* Captures réelles de l'application : ordinateur + téléphone */}
-          <div className="relative lg:pl-6">
+          <div className="relative xl:pl-6">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-2 shadow-2xl shadow-[#00B4DB]/10">
               <div className="flex items-center gap-1.5 px-2 py-2" aria-hidden="true">
                 <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
@@ -85,7 +85,7 @@ const HeroSection = () => {
             </div>
 
             {/* Téléphone en superposition, uniquement sur grand écran */}
-            <div className="hidden lg:block absolute -left-12 bottom-4 w-[152px]">
+            <div className="hidden xl:block absolute -left-12 bottom-4 w-[152px]">
               <div className="absolute -inset-6 bg-[#00B4DB]/15 blur-2xl rounded-full" aria-hidden="true" />
               <div className="relative rounded-[2rem] border border-white/15 bg-[#0a0f1c] p-1.5 shadow-2xl shadow-black/60">
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-16 h-1.5 rounded-full bg-white/15" aria-hidden="true" />

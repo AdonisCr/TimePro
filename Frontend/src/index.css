@@ -46,3 +46,22 @@
     @apply bg-slate-900;
   }
 }
+
+@layer utilities {
+  /*
+   * Largeur commune du site.
+   * Sur grand écran, le contenu occupe 80 % de la largeur de l'écran.
+   * En dessous de 1024 px, on garde toute la largeur pour rester lisible
+   * sur téléphone et tablette.
+   */
+  .site-container {
+    width: 100%;
+    max-width: 80rem;
+  }
+
+  @media (min-width: 1024px) {
+    .site-container {
+      max-width: 80vw;
+    }
+  }
+}

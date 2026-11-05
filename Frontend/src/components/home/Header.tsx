@@ -41,7 +41,7 @@ const Header = () => {
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="site-container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link to="/" className="flex items-center space-x-3 group">
             <div className="p-2 bg-gradient-to-br from-[#00B4DB] to-[#0086a8] rounded-xl group-hover:scale-105 transition-transform shadow-lg">
@@ -50,7 +50,7 @@ const Header = () => {
             <span className="text-2xl font-bold text-white">Time Pro</span>
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden xl:flex items-center space-x-8">
             {NAV_ITEMS.map(item => (
               <button
                 key={item.id}
@@ -62,7 +62,7 @@ const Header = () => {
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden xl:flex items-center space-x-4">
             <Link
               to="/login"
               className="text-white/70 hover:text-white transition-colors font-medium text-base"
@@ -79,7 +79,7 @@ const Header = () => {
 
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 text-white"
+            className="xl:hidden p-2 text-white"
             aria-label={isMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -87,7 +87,7 @@ const Header = () => {
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-[#0a0f1c]/98 backdrop-blur-lg border-t border-white/10 shadow-xl">
+          <div className="xl:hidden absolute top-full left-0 right-0 bg-[#0a0f1c]/98 backdrop-blur-lg border-t border-white/10 shadow-xl">
             <div className="px-4 py-6 space-y-4">
               {NAV_ITEMS.map(item => (
                 <button

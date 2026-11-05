@@ -49,7 +49,7 @@ const features = [
 const FeaturesSection = () => {
   return (
     <section id="features" className="scroll-mt-24 py-24 px-4 sm:px-6 lg:px-8 bg-[#0a0f1c]">
-      <div className="max-w-7xl mx-auto">
+      <div className="site-container mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10 mb-6">
             <Brain className="w-4 h-4 text-[#00B4DB]" />

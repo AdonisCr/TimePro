@@ -337,7 +337,7 @@ function Dashboard() {
         
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="max-w-8xl mx-auto space-y-8">
+          <div className="site-container mx-auto space-y-8">
             {renderCurrentPage()}
           </div>
         </main>

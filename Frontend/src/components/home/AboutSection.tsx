@@ -27,7 +27,7 @@ const steps = [
 const AboutSection = () => {
   return (
     <section id="how-it-works" className="scroll-mt-24 py-24 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-7xl mx-auto">
+      <div className="site-container mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-[#00B4DB]/10 px-6 py-3 rounded-full mb-8">
             <ListChecks className="w-5 h-5 text-[#00B4DB]" />
